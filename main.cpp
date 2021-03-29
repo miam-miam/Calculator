@@ -1,6 +1,20 @@
 #include <iostream>
 #include <iomanip>
+#include <string>
 #include <numeric>
+
+namespace myMath
+{
+    long long int powll(long long int base, int exp)
+    {
+        long long int count = base;
+        for (int i = 1; i < exp; i++)
+        {
+            count *= base;
+        }
+        return count;
+    }
+}
 
 
 class fraction
@@ -16,6 +30,8 @@ public:
         numerator = 0;
         denominator = 1;
     }
+
+    fraction(const std::string &number);
 
     long long integer;
     long long numerator;
@@ -39,7 +55,6 @@ public:
 
     explicit operator double()
     { return integer + double(numerator) / denominator; }
-
 };
 
 fraction::fraction(long long givenInt, long long givenNum, long long givenDen)
@@ -132,6 +147,31 @@ void fraction::normalise()
 
 }
 
+fraction::fraction(const std::string &number)  // Assumes there is only one decimal point
+{
+    const std::size_t offset = number.find('.');    // TODO: Test for ','
+    if (offset != std::string::npos)
+    {
+        integer = std::stoll(number.substr(0, offset));
+        numerator = std::stoll(number.substr(offset + 1));
+        if (integer < 0)
+        {
+            numerator = -numerator;
+        }
+
+        denominator = myMath::powll(10LL, number.length() - (offset + 1));
+
+        normalise();
+    }
+    else
+    {
+        integer = std::stoll(number);
+        denominator = 1;
+        numerator = 0;
+    }
+
+}
+
 fraction getFraction()
 {
     long long integer = 0;
@@ -166,10 +206,15 @@ int main()
     std::cout << std::setprecision(10);
 
     std::cout << "Hello, Calculator!" << std::endl;
-    fraction a = fraction(6, 5);
-    fraction b = fraction(1, 2, 7);
+    fraction a = fraction(1, 1000000016531 * 1000000);
+    fraction b = fraction(1, 1000000016347);
     std::cout << "A: " << a << ", B: " << b << std::endl;
     fraction c;
+
+    std::string userInput;
+    std::cin >> userInput;
+    auto e = fraction(userInput);
+    std::cout << "E: " << e << std::endl;
 
     c = a + b;
     std::cout << "C: " << c << std::endl;
@@ -181,7 +226,7 @@ int main()
     std::cout << "C: " << c << std::endl;
 
 
-    double d = (double) c;
+    auto d = (double) c;
     std::cout << "D: " << d << std::endl;
 
     std::cout << (float) c << std::endl;
