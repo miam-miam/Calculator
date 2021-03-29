@@ -1,10 +1,10 @@
 
 
-#ifndef CALCULATOR_MYMATH_H
-#define CALCULATOR_MYMATH_H
+#ifndef CALCULATOR__MYMATH_H
+#define CALCULATOR__MYMATH_H
 
 #include <cstdint>
 
-int64_t powll(int64_t base, int exp);
+int64_t powll(int64_t Base, int Exp);
 
-#endif //CALCULATOR_MYMATH_H
+#endif //CALCULATOR__MYMATH_H

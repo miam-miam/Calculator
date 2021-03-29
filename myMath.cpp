@@ -1,13 +1,12 @@
 #include <cstdint>
 #include "myMath.h"
 
-
-int64_t powll(int64_t base, int exp)
+int64_t powll(int64_t Base, int Exp)
 {
-    int64_t count = base;
-    for (int i = 1; i < exp; i++)
+    int64_t Count = Base;
+    for (int I = 1; I < Exp; I++)
     {
-        count *= base;
+        Count *= Base;
     }
-    return count;
+    return Count;
 }

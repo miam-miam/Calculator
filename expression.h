@@ -1,19 +1,39 @@
 
 
-#ifndef CALCULATOR_EXPRESSION_H
-#define CALCULATOR_EXPRESSION_H
+#ifndef CALCULATOR__EXPRESSION_H
+#define CALCULATOR__EXPRESSION_H
 
-#include <list>
+#include <vector>
 #include <string>
 #include "fraction.h"
 
-class expression
+enum TokenType
 {
-private:
-    std::list<fraction> infixToken;
-    std::list<fraction> postfixToken;
-
-    int *tokenise(std::string &string);
+    FRACTION,
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    LBRACKET,
+    RBRACKET
 };
 
-#endif //CALCULATOR_EXPRESSION_H
+struct token
+{
+    void *at;
+    uint32_t length;
+    TokenType type;
+    explicit token(fraction F1);
+    explicit token(char C1);
+    
+};
+
+struct expression
+{
+    std::vector<token> infixToken;
+    std::vector<token> postfixToken;
+    
+    int *tokenise(std::string_view &String);
+};
+
+#endif //CALCULATOR__EXPRESSION_H
