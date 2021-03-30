@@ -16,10 +16,18 @@ int main()
     std::cout << "A: " << a << ", B: " << b << std::endl;
     fraction c;
     */
-    std::string userInput;
-    std::cin >> userInput;
-    std::string_view userView = userInput;
-    auto e = expression(userView);
+    while (true)
+    {
+        std::cout << "Input expression: " << std::endl;
+        std::string userInput;
+        std::cin >> userInput;
+        std::string_view userView = userInput;
+        if (userView == "stop" || userView == "Stop")
+        {
+            break;
+        }
+        auto e = expression(userView);
+    }
     /*
     c = a + b;
     std::cout << "C: " << c << std::endl;

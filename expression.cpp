@@ -8,21 +8,21 @@ void expression::tokenise(std::string_view &String)
     bool decimalPoint;
     for (int i = 0; i < String.length(); i++)
     {
-        if ('0' <= (int) String[i] and (int) String[i] <= '9')
+        if ('0' <= (int) String[i] && (int) String[i] <= '9')
         {
             decimalPoint = false;
             int j = i;
             for (; j < String.length(); j++)
             {
-                if ('0' <= (int) String[j] and (int) String[j] <= '9')
+                if ('0' <= (int) String[j] && (int) String[j] <= '9')
                 {
                     continue;
                 }
-                else if (!decimalPoint and (String[j] == '.'))
+                else if (!decimalPoint && (String[j] == '.'))
                 {
                     decimalPoint = true;
                 }
-                else if (decimalPoint and (String[j] == '.'))
+                else if (decimalPoint && (String[j] == '.'))
                 {
                     throw std::runtime_error("Should only have one decimal point.");
                 }
@@ -64,7 +64,7 @@ void expression::infixToPostfix()
         {
             case FRACTION:
             {
-                postfix_tokens.push(tokenInfix);
+                postfix_tokens.push_back(tokenInfix);
                 break;
             }
             case PLUS:
@@ -72,12 +72,12 @@ void expression::infixToPostfix()
             case MULTIPLY:
             case DIVIDE:
             {
-                while (!operatorStack.empty() and (operatorOperator = operatorStack.back()).type != LBRACKET
-                    and (Precedence[operatorOperator.type]
+                while (!operatorStack.empty() && (operatorOperator = operatorStack.back()).type != LBRACKET
+                    && (Precedence[operatorOperator.type]
                         >= Precedence[tokenInfix.type])) //If implementing powers precedence cannot be equal as it is right associative and not left.
                 {
                     operatorStack.pop_back();
-                    postfix_tokens.push(operatorOperator);
+                    postfix_tokens.push_back(operatorOperator);
                 }
                 operatorStack.push_back(tokenInfix);
                 break;
@@ -92,7 +92,7 @@ void expression::infixToPostfix()
                 while ((operatorOperator = operatorStack.back()).type != LBRACKET)
                 {
                     operatorStack.pop_back();
-                    postfix_tokens.push(operatorOperator);
+                    postfix_tokens.push_back(operatorOperator);
                     if (operatorStack.empty())
                     {
                         throw std::runtime_error("Unmatched brackets.");
@@ -109,11 +109,11 @@ void expression::infixToPostfix()
     while (!operatorStack.empty())
     {
         operatorOperator = operatorStack.back();
-        if (operatorOperator.type == LBRACKET or operatorOperator.type == RBRACKET)
+        if (operatorOperator.type == LBRACKET || operatorOperator.type == RBRACKET)
         {
             throw std::runtime_error("Unmatched brackets.");
         }
-        postfix_tokens.push(operatorOperator);
+        postfix_tokens.push_back(operatorOperator);
         operatorStack.pop_back();
     }
     
@@ -123,35 +123,49 @@ fraction expression::evaluatePostfix()
 {
     //TODO do deep copy
     std::vector<fraction> result;
-    while (postfix_tokens.size() > 1)
+    for (auto it = postfix_tokens.begin(); it != postfix_tokens.end(); ++it)
     {
-        token x = postfix_tokens.front();
-        postfix_tokens.pop();
-        token y = postfix_tokens.front();
-        postfix_tokens.pop();
-        token op = postfix_tokens.front();
-        postfix_tokens.pop();
-        
-        switch (op.type)
+        switch (it->type)
         {
+            case FRACTION:
+            {
+                result.push_back(it->frac);
+                break;
+            }
             case PLUS:
             {
-                result.push_back(y.frac + x.frac);
+                fraction x = result.back();
+                result.pop_back();
+                fraction y = result.back();
+                result.pop_back();
+                result.push_back(y + x);
                 break;
             }
             case MINUS:
             {
-                result.push_back(y.frac - x.frac);
+                fraction x = result.back();
+                result.pop_back();
+                fraction y = result.back();
+                result.pop_back();
+                result.push_back(y - x);
                 break;
             }
             case MULTIPLY:
             {
-                result.push_back(y.frac * x.frac);
+                fraction x = result.back();
+                result.pop_back();
+                fraction y = result.back();
+                result.pop_back();
+                result.push_back(y * x);
                 break;
             }
             case DIVIDE:
             {
-                result.push_back(y.frac / x.frac);
+                fraction x = result.back();
+                result.pop_back();
+                fraction y = result.back();
+                result.pop_back();
+                result.push_back(y / x);
                 break;
             }
             default:
@@ -159,7 +173,6 @@ fraction expression::evaluatePostfix()
                 throw std::runtime_error("Should be operator.");
             }
         }
-        
     }
     
     return result.front();

@@ -41,7 +41,7 @@ struct token
 struct expression
 {
     std::queue<token> infix_tokens;
-    std::queue<token> postfix_tokens;
+    std::deque<token> postfix_tokens;
     
     explicit expression(std::string_view &String);
     
