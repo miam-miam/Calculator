@@ -18,11 +18,11 @@ void expression::tokenise(std::string_view &String)
                 {
                     continue;
                 }
-                else if (!decimalPoint and (String[j] == '.' or String[j] == ','))
+                else if (!decimalPoint and (String[j] == '.'))
                 {
                     decimalPoint = true;
                 }
-                else if (decimalPoint and (String[j] == '.' or String[j] == ','))
+                else if (decimalPoint and (String[j] == '.'))
                 {
                     throw std::runtime_error("Should only have one decimal point.");
                 }
