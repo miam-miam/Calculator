@@ -21,54 +21,54 @@ fraction::fraction(int64_t GivenNum, int64_t GivenDen)
 
 fraction fraction::operator-(const fraction F1) const
 {
-    fraction Temp;
-    Temp.integer = integer - F1.integer;
+    fraction temp;
+    temp.integer = integer - F1.integer;
     if (denominator == 1 && F1.denominator == 1)
     {
-        return Temp;
+        return temp;
     }
-    Temp.denominator = F1.denominator * denominator;
-    Temp.numerator = F1.denominator * numerator - F1.numerator * denominator;
-    Temp.normalise();
-    return Temp;
+    temp.denominator = F1.denominator * denominator;
+    temp.numerator = F1.denominator * numerator - F1.numerator * denominator;
+    temp.normalise();
+    return temp;
 }
 
 fraction fraction::operator+(const fraction F1) const
 {
-    fraction Temp;
-    Temp.integer = F1.integer + integer;
+    fraction temp;
+    temp.integer = F1.integer + integer;
     if (denominator == 1 && F1.denominator == 1)
     {
-        return Temp;
+        return temp;
     }
-    Temp.denominator = F1.denominator * denominator;
-    Temp.numerator = F1.numerator * denominator + F1.denominator * numerator;
-    Temp.normalise();
-    return Temp;
+    temp.denominator = F1.denominator * denominator;
+    temp.numerator = F1.numerator * denominator + F1.denominator * numerator;
+    temp.normalise();
+    return temp;
 }
 
 fraction fraction::operator*(const fraction F1) const
 {
-    fraction Temp;
-    Temp.integer = F1.integer * integer;
+    fraction temp;
+    temp.integer = F1.integer * integer;
     if (denominator == 1 && F1.denominator == 1)
     {
-        return Temp;
+        return temp;
     }
-    Temp.denominator = F1.denominator * denominator;
-    Temp.numerator =
+    temp.denominator = F1.denominator * denominator;
+    temp.numerator =
         F1.numerator * numerator + F1.denominator * F1.integer * numerator + denominator * integer * F1.numerator;
-    Temp.normalise();
-    return Temp;
+    temp.normalise();
+    return temp;
 }
 
 fraction fraction::operator/(const fraction F1) const
 {
-    fraction Temp;
-    Temp.denominator = F1.denominator * denominator * F1.integer + denominator * F1.numerator;
-    Temp.numerator = integer * denominator * F1.denominator + F1.denominator * numerator;
-    Temp.normalise();
-    return Temp;
+    fraction temp;
+    temp.denominator = F1.denominator * denominator * F1.integer + denominator * F1.numerator;
+    temp.numerator = integer * denominator * F1.denominator + F1.denominator * numerator;
+    temp.normalise();
+    return temp;
 }
 
 void fraction::normalise()
@@ -93,29 +93,29 @@ void fraction::normalise()
         return;
     }
     
-    const int64_t Gcd = std::gcd((int64_t) numerator, (int64_t) denominator);
+    const int64_t gcd = std::gcd((int64_t) numerator, (int64_t) denominator);
     
-    if (Gcd != 1)
+    if (gcd != 1)
     {
-        numerator = numerator / Gcd;
-        denominator = denominator / Gcd;
+        numerator = numerator / gcd;
+        denominator = denominator / gcd;
     }
     
 }
 
 fraction::fraction(const std::string_view &Number)  // Assumes there is only one decimal point
 {
-    const std::size_t Offset = Number.find('.');    // TODO: Test for ','
-    if (Offset != std::string::npos)
+    const std::size_t offset = Number.find('.');    // TODO: Test for ','
+    if (offset != std::string::npos)
     {
-        integer = std::stoll(Number.substr(0, Offset).data());
-        numerator = std::stoll(Number.substr(Offset + 1).data());
+        integer = std::stoll(Number.substr(0, offset).data());
+        numerator = std::stoll(Number.substr(offset + 1).data());
         if (integer < 0)
         {
             numerator = -numerator;
         }
         
-        denominator = powll(10LL, Number.length() - (Offset + 1));
+        denominator = powll(10LL, Number.length() - (offset + 1));
         
         normalise();
     }
@@ -132,7 +132,7 @@ std::ostream &operator<<(std::ostream &Strm, const fraction &F1)
 {
     if (F1.denominator == 1)
     {
-        Strm << F1.numerator;
+        Strm << F1.integer;
     }
     else
     {

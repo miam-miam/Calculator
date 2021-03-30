@@ -3,10 +3,10 @@
 
 int64_t powll(int64_t Base, int Exp)
 {
-    int64_t Count = Base;
-    for (int I = 1; I < Exp; I++)
+    int64_t count = Base;
+    for (int i = 1; i < Exp; i++)
     {
-        Count *= Base;
+        count *= Base;
     }
-    return Count;
+    return count;
 }

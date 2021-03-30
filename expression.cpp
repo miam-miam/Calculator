@@ -1,27 +1,28 @@
-#include <string>
 #include <stdexcept>
+#include <iostream>
 #include "fraction.h"
 #include "expression.h"
 
-int *expression::tokenise(std::string_view &String)
+void expression::tokenise(std::string_view &String)
 {
-    bool DecimalPoint;
-    for (int I = 0; I < String.length(); I++)
+    bool decimalPoint;
+    for (int i = 0; i < String.length(); i++)
     {
-        if ('0' <= (int) String[I] and (int) String[I] <= '9')
+        if ('0' <= (int) String[i] and (int) String[i] <= '9')
         {
-            DecimalPoint = false;
-            for (int J = I; I < String.length(); J++)
+            decimalPoint = false;
+            int j = i;
+            for (; j < String.length(); j++)
             {
-                if ('0' <= (int) String[J] and (int) String[J] <= '9')
+                if ('0' <= (int) String[j] and (int) String[j] <= '9')
                 {
                     continue;
                 }
-                else if (!DecimalPoint and (String[J] == '.' or String[J] == ','))
+                else if (!decimalPoint and (String[j] == '.' or String[j] == ','))
                 {
-                    DecimalPoint = true;
+                    decimalPoint = true;
                 }
-                else if (DecimalPoint and (String[J] == '.' or String[J] == ','))
+                else if (decimalPoint and (String[j] == '.' or String[j] == ','))
                 {
                     throw std::runtime_error("Should only have one decimal point.");
                 }
@@ -29,31 +30,143 @@ int *expression::tokenise(std::string_view &String)
                 {
                     break;
                 }
-                
-                infixToken.emplace_back(String.substr(I, J - I));
-                
             }
             
+            fraction tempFraction = fraction(String.substr(i, j - i));
+            infix_tokens.emplace(tempFraction);
+            i = j - 1;
+            
         }
-        else if (String[I] == '+' or String[I] == '/' or String[I] == '*' or String[I] == '-' or String[I] == '(' or
-            String[I] == ')')
+        else
         {
-            infixToken.emplace_back(String[I]);
+            infix_tokens.emplace(String[i]);
         }
     }
 }
 
-token::token(fraction F1)
+expression::expression(std::string_view &String)
 {
-    at = &F1;
-    length = sizeof(F1);
-    type = FRACTION;
+    tokenise(String);
+    infixToPostfix();
+    fraction result = evaluatePostfix();
+    std::cout << result << std::endl;
+}
+
+void expression::infixToPostfix()
+{
+    std::vector<token> operatorStack;
+    token operatorOperator;
+    while (!infix_tokens.empty())
+    {
+        token tokenInfix = infix_tokens.front();
+        infix_tokens.pop();
+        switch (tokenInfix.type)
+        {
+            case FRACTION:
+            {
+                postfix_tokens.push(tokenInfix);
+                break;
+            }
+            case PLUS:
+            case MINUS:
+            case MULTIPLY:
+            case DIVIDE:
+            {
+                while (!operatorStack.empty() and (operatorOperator = operatorStack.back()).type != LBRACKET
+                    and (Precedence[operatorOperator.type]
+                        >= Precedence[tokenInfix.type])) //If implementing powers precedence cannot be equal as it is right associative and not left.
+                {
+                    operatorStack.pop_back();
+                    postfix_tokens.push(operatorOperator);
+                }
+                operatorStack.push_back(tokenInfix);
+                break;
+            }
+            case LBRACKET:
+            {
+                operatorStack.push_back(tokenInfix);
+                break;
+            }
+            case RBRACKET:
+            {
+                while ((operatorOperator = operatorStack.back()).type != LBRACKET)
+                {
+                    operatorStack.pop_back();
+                    postfix_tokens.push(operatorOperator);
+                    if (operatorStack.empty())
+                    {
+                        throw std::runtime_error("Unmatched brackets.");
+                    }
+                }
+                // Discard Left bracket
+                operatorStack.pop_back();
+                break;
+            }
+            case NONE:throw std::runtime_error("Had an empty tokenInfix.");
+        }
+    }
+    
+    while (!operatorStack.empty())
+    {
+        operatorOperator = operatorStack.back();
+        if (operatorOperator.type == LBRACKET or operatorOperator.type == RBRACKET)
+        {
+            throw std::runtime_error("Unmatched brackets.");
+        }
+        postfix_tokens.push(operatorOperator);
+        operatorStack.pop_back();
+    }
+    
+}
+
+fraction expression::evaluatePostfix()
+{
+    //TODO do deep copy
+    std::vector<fraction> result;
+    while (postfix_tokens.size() > 1)
+    {
+        token x = postfix_tokens.front();
+        postfix_tokens.pop();
+        token y = postfix_tokens.front();
+        postfix_tokens.pop();
+        token op = postfix_tokens.front();
+        postfix_tokens.pop();
+        
+        switch (op.type)
+        {
+            case PLUS:
+            {
+                result.push_back(y.frac + x.frac);
+                break;
+            }
+            case MINUS:
+            {
+                result.push_back(y.frac - x.frac);
+                break;
+            }
+            case MULTIPLY:
+            {
+                result.push_back(y.frac * x.frac);
+                break;
+            }
+            case DIVIDE:
+            {
+                result.push_back(y.frac / x.frac);
+                break;
+            }
+            default:
+            {
+                throw std::runtime_error("Should be operator.");
+            }
+        }
+        
+    }
+    
+    return result.front();
 }
 
 token::token(char C1)
 {
-    at = &C1;
-    length = sizeof(C1);
     switch (C1)
     {
         case '+':
@@ -88,8 +201,19 @@ token::token(char C1)
         }
         default:
         {
-            throw std::runtime_error("Should only have one decimal point.");
+            throw std::runtime_error("Unknown operator.");
         }
     }
+}
+
+token::token()
+{
+    type = NONE;
+}
+
+token::token(fraction F1)
+{
+    frac = F1;
+    type = FRACTION;
 }
 
