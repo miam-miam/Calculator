@@ -122,3 +122,6 @@ fabric.properties
 .idea/inspectionProfiles/Project_Default.xml
 .idea/dictionaries/alecm.xml
 .idea/Calculator.iml
+
+build
+.vs
