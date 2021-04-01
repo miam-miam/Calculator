@@ -1,5 +1,3 @@
-#include <stdexcept>
-#include <iostream>
 #include "fraction.h"
 #include "expression.h"
 

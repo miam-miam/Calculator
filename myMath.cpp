@@ -1,4 +1,3 @@
-#include <cstdint>
 #include "myMath.h"
 
 int64_t powll(int64_t Base, int Exp)

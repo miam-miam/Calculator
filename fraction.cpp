@@ -1,6 +1,3 @@
-#include <string>
-#include <numeric>
-#include <iostream>
 #include "fraction.h"
 #include "myMath.h"
 
@@ -23,6 +20,7 @@ fraction fraction::operator-(const fraction F1) const
 {
     fraction temp;
     temp.integer = integer - F1.integer;
+    
     if (denominator == 1 && F1.denominator == 1)
     {
         return temp;

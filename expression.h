@@ -3,12 +3,6 @@
 #ifndef CALCULATOR__EXPRESSION_H
 #define CALCULATOR__EXPRESSION_H
 
-#include <vector>
-#include <queue>
-#include <string>
-#include <unordered_map>
-#include "fraction.h"
-
 enum TokenType
 {
     FRACTION,
@@ -29,7 +23,7 @@ struct token
     union
     {
         fraction frac;
-        float flo;
+        float flo{};    // Using {} so that it constructs an empty float if union unused
     };
     
     TokenType type;

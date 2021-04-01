@@ -2,8 +2,6 @@
 #ifndef CALCULATOR__FRACTION_H
 #define CALCULATOR__FRACTION_H
 
-#include <string>
-
 struct fraction
 {
     public:
