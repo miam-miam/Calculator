@@ -5,7 +5,7 @@
 
 enum TokenType
 {
-    FRACTION,
+    NUMBER,
     NONE,
     PLUS,
     MINUS,
@@ -20,14 +20,9 @@ const int Precedence[] = {0, 0, 2, 2, 3, 3, 1, 0};
 
 struct token
 {
-    union
-    {
-        fraction frac;
-        float flo{};    // Using {} so that it constructs an empty float if union unused
-    };
-    
+    number num;
     TokenType type;
-    explicit token(fraction F1);
+    explicit token(number N1);
     explicit token(char C1);
     token();
 };
@@ -41,7 +36,7 @@ struct expression
     
     void tokenise(std::string_view &String);
     void infixToPostfix();
-    fraction evaluatePostfix();
+    number evaluatePostfix();
 };
 
 #endif //CALCULATOR__EXPRESSION_H

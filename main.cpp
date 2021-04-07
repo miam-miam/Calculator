@@ -1,4 +1,4 @@
-#include "fraction.h"
+#include "number.h"
 #include "expression.h"
 
 int main()

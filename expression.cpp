@@ -1,4 +1,4 @@
-#include "fraction.h"
+#include "number.h"
 #include "expression.h"
 
 void expression::tokenise(std::string_view &String)
@@ -29,11 +29,11 @@ void expression::tokenise(std::string_view &String)
                     break;
                 }
             }
-            
-            fraction tempFraction = fraction(String.substr(i, j - i));
-            infix_tokens.emplace(tempFraction);
+    
+            number tempNumber = number(String.substr(i, j - i));
+            infix_tokens.emplace(tempNumber);
             i = j - 1;
-            
+    
         }
         else
         {
@@ -46,7 +46,7 @@ expression::expression(std::string_view &String)
 {
     tokenise(String);
     infixToPostfix();
-    fraction result = evaluatePostfix();
+    number result = evaluatePostfix();
     std::cout << result << std::endl;
 }
 
@@ -60,7 +60,7 @@ void expression::infixToPostfix()
         infix_tokens.pop();
         switch (tokenInfix.type)
         {
-            case FRACTION:
+            case NUMBER:
             {
                 postfix_tokens.push_back(tokenInfix);
                 break;
@@ -117,51 +117,51 @@ void expression::infixToPostfix()
     
 }
 
-fraction expression::evaluatePostfix()
+number expression::evaluatePostfix()
 {
     //TODO do deep copy
-    std::vector<fraction> result;
+    std::vector<number> result;
     for (auto it = postfix_tokens.begin(); it != postfix_tokens.end(); ++it)
     {
         switch (it->type)
         {
-            case FRACTION:
+            case NUMBER:
             {
-                result.push_back(it->frac);
+                result.push_back(it->num);
                 break;
             }
             case PLUS:
             {
-                fraction x = result.back();
+                number x = result.back();
                 result.pop_back();
-                fraction y = result.back();
+                number y = result.back();
                 result.pop_back();
                 result.push_back(y + x);
                 break;
             }
             case MINUS:
             {
-                fraction x = result.back();
+                number x = result.back();
                 result.pop_back();
-                fraction y = result.back();
+                number y = result.back();
                 result.pop_back();
                 result.push_back(y - x);
                 break;
             }
             case MULTIPLY:
             {
-                fraction x = result.back();
+                number x = result.back();
                 result.pop_back();
-                fraction y = result.back();
+                number y = result.back();
                 result.pop_back();
                 result.push_back(y * x);
                 break;
             }
             case DIVIDE:
             {
-                fraction x = result.back();
+                number x = result.back();
                 result.pop_back();
-                fraction y = result.back();
+                number y = result.back();
                 result.pop_back();
                 result.push_back(y / x);
                 break;
@@ -222,9 +222,9 @@ token::token()
     type = NONE;
 }
 
-token::token(fraction F1)
+token::token(number N1)
 {
-    frac = F1;
-    type = FRACTION;
+    num = N1;
+    type = NUMBER;
 }
 
