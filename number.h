@@ -51,7 +51,7 @@ struct number
     number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     explicit number(SafeInt<int64_t> GivenInt);
-    explicit number(const std::string_view &Number);
+    explicit number(const std::string_view &Number, int Offset=-2);
     number();
     
     explicit operator double() const;

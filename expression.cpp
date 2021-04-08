@@ -1,5 +1,6 @@
 #include "number.h"
 #include "expression.h"
+#include <algorithm>
 
 void expression::tokenise(std::string_view &String)
 {
@@ -9,6 +10,7 @@ void expression::tokenise(std::string_view &String)
         if ('0' <= (int) String[i] && (int) String[i] <= '9')
         {
             decimalPoint = false;
+            bool space = false;
             int j = i;
             for (; j < String.length(); j++)
             {
@@ -22,20 +24,34 @@ void expression::tokenise(std::string_view &String)
                 }
                 else if (decimalPoint && (String[j] == '.'))
                 {
-                    throw std::runtime_error("Should only have one decimal point.");
+                    throw InvalidDecimalPoint();
+                }
+                else if (!space && String[j] == ' ')
+                {
+                    space = true;
+                    continue;
                 }
                 else
                 {
                     break;
                 }
             }
-    
-            number tempNumber = number(String.substr(i, j - i));
+            number tempNumber;
+            if (space)
+            {
+                std::string stringNumber = String.substr(i, j - i).data();
+                stringNumber.erase(std::remove(stringNumber.begin(), stringNumber.end(), ' '), stringNumber.end());
+                tempNumber = number(std::string_view(stringNumber));
+            }
+            else
+            {
+                tempNumber = number(String.substr(i, j - i));
+            }
             infix_tokens.emplace(tempNumber);
             i = j - 1;
     
         }
-        else
+        else if (String[i] != ' ')
         {
             infix_tokens.emplace(String[i]);
         }
@@ -92,14 +108,14 @@ void expression::infixToPostfix()
                     postfix_tokens.push_back(operatorOperator);
                     if (operatorStack.empty())
                     {
-                        throw std::runtime_error("Unmatched brackets.");
+                        throw UnmatchedBracket();
                     }
                 }
                 // Discard Left bracket
                 operatorStack.pop_back();
                 break;
             }
-            case NONE:throw std::runtime_error("Had an empty tokenInfix.");
+            case NONE:assert(0);
         }
     }
     
@@ -108,7 +124,7 @@ void expression::infixToPostfix()
         operatorOperator = operatorStack.back();
         if (operatorOperator.type == LBRACKET || operatorOperator.type == RBRACKET)
         {
-            throw std::runtime_error("Unmatched brackets.");
+            throw UnmatchedBracket();
         }
         postfix_tokens.push_back(operatorOperator);
         operatorStack.pop_back();
@@ -119,60 +135,60 @@ void expression::infixToPostfix()
 number expression::evaluatePostfix()
 {
     //TODO do deep copy
-    std::vector<number> result;
+    std::vector<number> resultVec;
     for (auto it = postfix_tokens.begin(); it != postfix_tokens.end(); ++it)
     {
         switch (it->type)
         {
             case NUMBER:
             {
-                result.push_back(it->num);
+                resultVec.push_back(it->num);
                 break;
             }
             case PLUS:
             {
-                number x = result.back();
-                result.pop_back();
-                number y = result.back();
-                result.pop_back();
-                result.push_back(y + x);
+                number x = resultVec.back();
+                resultVec.pop_back();
+                number y = resultVec.back();
+                resultVec.pop_back();
+                resultVec.push_back(y + x);
                 break;
             }
             case MINUS:
             {
-                number x = result.back();
-                result.pop_back();
-                number y = result.back();
-                result.pop_back();
-                result.push_back(y - x);
+                number x = resultVec.back();
+                resultVec.pop_back();
+                number y = resultVec.back();
+                resultVec.pop_back();
+                resultVec.push_back(y - x);
                 break;
             }
             case MULTIPLY:
             {
-                number x = result.back();
-                result.pop_back();
-                number y = result.back();
-                result.pop_back();
-                result.push_back(y * x);
+                number x = resultVec.back();
+                resultVec.pop_back();
+                number y = resultVec.back();
+                resultVec.pop_back();
+                resultVec.push_back(y * x);
                 break;
             }
             case DIVIDE:
             {
-                number x = result.back();
-                result.pop_back();
-                number y = result.back();
-                result.pop_back();
-                result.push_back(y / x);
+                number x = resultVec.back();
+                resultVec.pop_back();
+                number y = resultVec.back();
+                resultVec.pop_back();
+                resultVec.push_back(y / x);
                 break;
             }
             default:
             {
-                throw std::runtime_error("Should be operator.");
+                assert(0);
             }
         }
     }
     
-    return result.front();
+    return resultVec.front();
 }
 
 token::token(char C1)
@@ -211,7 +227,7 @@ token::token(char C1)
         }
         default:
         {
-            throw std::runtime_error("Unknown operator.");
+            throw UnknownOperator();
         }
     }
 }

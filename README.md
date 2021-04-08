@@ -3,9 +3,9 @@ A Calculator app made in C++
 
 # Features
 
-- [ ] Proper syntax (do not allow unclose parenthesises)
-- [ ] Maths exceptions( do not allow 0^0, infinity, x/0)
-- [ ] overflow protection
+- [x] Proper syntax (do not allow unclose parenthesises)
+- [x] Maths exceptions( do not allow 0^0, infinity, x/0)
+- [x] overflow protection
 - [ ] Colour themes
 - [ ] Show exact or float (or mixed fraction)
 - [ ] Powers

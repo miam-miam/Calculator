@@ -10,16 +10,23 @@ int main()
     
     while (true)
     {
-        std::cout << "Input expression: " << std::endl;
-        std::string userInput;
-        std::cin >> userInput;
-        std::string_view userView = userInput;
-        if (userView == "stop" || userView == "Stop")
+        try
         {
-            break;
+            std::cout << "Input expression: " << std::endl;
+            std::string userInput;
+            std::getline(std::cin, userInput);
+            std::string_view userView = userInput;
+            if (userView == "stop" || userView == "Stop")
+            {
+                break;
+            }
+            auto e = expression(userView);
+            std::cout << e << std::endl;
         }
-        auto e = expression(userView);
-        std::cout << e << std::endl;
+        catch (CalculatorException &e)
+        {
+            std::cout << "Caught error: " << e.what() << std::endl;
+        }
     }
     return 0;
 }

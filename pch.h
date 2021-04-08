@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include "safeInt.hpp"
+#include "exceptions.h"
 
 // Data structures
 #include <string>

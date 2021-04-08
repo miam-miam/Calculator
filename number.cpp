@@ -18,6 +18,10 @@ fraction::fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)  // Not
 
 void fraction::normalise()
 {
+    if (denominator == 0)
+    {
+        throw DivisionByZero();
+    }
     
     if (denominator < 0)
     {
@@ -99,22 +103,26 @@ number::number(SafeInt<int64_t> GivenInt)
     integer = GivenInt;
 }
 
-number::number(const std::string_view &Number)  // Assumes there is only one decimal point
+number::number(const std::string_view &Number, int Offset)  // Assumes there is only one decimal point
+// For Offset -2 means not searched and -1 not found
 {
-    const std::size_t offset = Number.find('.');    // TODO: Test for ','
+    if (Offset == -2)
+    {
+        Offset = Number.find('.');
+    }
     try
     {
-        if (offset != std::string::npos)
+        if (Offset != -1)
         {
             type = FRACTION_TYPE;
-            fraction.integer = std::stoll(Number.substr(0, offset).data());
-            fraction.numerator = std::stoll(Number.substr(offset + 1).data());
+            fraction.integer = std::stoll(Number.substr(0, Offset).data());
+            fraction.numerator = std::stoll(Number.substr(Offset + 1).data());
             if (fraction.integer < 0)
             {
                 fraction.numerator = -fraction.numerator;
             }
         
-            fraction.denominator = powll(10LL, Number.length() - (offset + 1));
+            fraction.denominator = powll(10LL, Number.length() - (Offset + 1));
         
             fraction.normalise();
         }
@@ -124,7 +132,7 @@ number::number(const std::string_view &Number)  // Assumes there is only one dec
             integer = std::stoll(Number.data());
         }
     }
-    catch (std::out_of_range &e)
+    catch (const std::out_of_range &e)
     {
         type = DOUBLE_TYPE;
         double_num = std::stod(Number.data());
@@ -170,7 +178,7 @@ number number::operator+(const number N1) const
             result.double_num = double(*this) + double(N1);
         }
     }
-    catch (SafeIntException& err)
+    catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
         result.double_num = double(*this) + double(N1);
@@ -217,7 +225,7 @@ number number::operator-(const number N1) const
             result.double_num = double(*this) - double(N1);
         }
     }
-    catch (SafeIntException& err)
+    catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
         result.double_num = double(*this) - double(N1);
@@ -283,7 +291,7 @@ number number::operator*(const number N1) const
             result.double_num = double(*this) * double(N1);
         }
     }
-    catch (SafeIntException& err)
+    catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
         result.double_num = double(*this) * double(N1);
@@ -347,11 +355,16 @@ number number::operator/(const number N1) const
         }
         else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
         {
+            const double doubleN1 = double(N1);
+            if (doubleN1 == 0)
+            {
+                throw DivisionByZero();
+            }
             result.type = DOUBLE_TYPE;
-            result.double_num = double(*this) / double(N1);
+            result.double_num = double(*this) / doubleN1;
         }
     }
-    catch (SafeIntException& err)
+    catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
         result.double_num = double(*this) / double(N1);
