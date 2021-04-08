@@ -4,8 +4,8 @@
 int main()
 {
     
-    // Setting the precision to 9 decimal places
-    std::cout << std::setprecision(10);
+    // Setting the precision to 13 decimal places
+    std::cout << std::setprecision(14);
     std::cout << "Hello, Calculator!" << std::endl;
     
     while (true)
@@ -19,6 +19,7 @@ int main()
             break;
         }
         auto e = expression(userView);
+        std::cout << e << std::endl;
     }
     return 0;
 }

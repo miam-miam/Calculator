@@ -31,6 +31,7 @@ struct expression
 {
     std::queue<token> infix_tokens;
     std::deque<token> postfix_tokens;
+    number result;
     
     explicit expression(std::string_view &String);
     
@@ -38,5 +39,7 @@ struct expression
     void infixToPostfix();
     number evaluatePostfix();
 };
+
+std::ostream &operator<<(std::ostream &Strm, const expression &);
 
 #endif //CALCULATOR__EXPRESSION_H

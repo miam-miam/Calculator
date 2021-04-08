@@ -68,6 +68,10 @@ std::ostream &operator<<(std::ostream &Strm, const number &N1)
     {
         Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
     }
+    else if (N1.type == number::DOUBLE_TYPE)
+    {
+        Strm << N1.double_num;
+    }
     return Strm;
 }
 
@@ -98,56 +102,78 @@ number::number(SafeInt<int64_t> GivenInt)
 number::number(const std::string_view &Number)  // Assumes there is only one decimal point
 {
     const std::size_t offset = Number.find('.');    // TODO: Test for ','
-    if (offset != std::string::npos)
+    try
     {
-        type = FRACTION_TYPE;
-        fraction.integer = std::stoll(Number.substr(0, offset).data());
-        fraction.numerator = std::stoll(Number.substr(offset + 1).data());
-        if (fraction.integer < 0)
+        if (offset != std::string::npos)
         {
-            fraction.numerator = -fraction.numerator;
+            type = FRACTION_TYPE;
+            fraction.integer = std::stoll(Number.substr(0, offset).data());
+            fraction.numerator = std::stoll(Number.substr(offset + 1).data());
+            if (fraction.integer < 0)
+            {
+                fraction.numerator = -fraction.numerator;
+            }
+        
+            fraction.denominator = powll(10LL, Number.length() - (offset + 1));
+        
+            fraction.normalise();
         }
-        
-        fraction.denominator = powll(10LL, Number.length() - (offset + 1));
-        
-        fraction.normalise();
+        else
+        {
+            type = INTEGER_TYPE;
+            integer = std::stoll(Number.data());
+        }
     }
-    else
+    catch (std::out_of_range &e)
     {
-        type = INTEGER_TYPE;
-        integer = std::stoll(Number.data());
+        type = DOUBLE_TYPE;
+        double_num = std::stod(Number.data());
     }
+
 }
 
 number number::operator+(const number N1) const
 {
     number result = number(0, 0, 1);
     
-    if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
+    try
     {
-        result = number(integer + N1.integer);
-    }
-    else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
-    {
-        result = number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
-    }
-    else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result = number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
-    }
-    else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result.fraction.integer = fraction.integer + N1.fraction.integer;
-        result.fraction.numerator =
-            N1.fraction.denominator * fraction.numerator + N1.fraction.numerator * fraction.denominator;
-        result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
+        if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
+            result = number(integer + N1.integer);
         }
+        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        {
+            result = number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
+        }
+        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result = number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
+        }
+        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result.fraction.integer = fraction.integer + N1.fraction.integer;
+            result.fraction.numerator =
+                N1.fraction.denominator * fraction.numerator + N1.fraction.numerator * fraction.denominator;
+            result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
+        {
+            result.type = DOUBLE_TYPE;
+            result.double_num = double(*this) + double(N1);
+        }
+    }
+    catch (SafeIntException& err)
+    {
+        result.type = DOUBLE_TYPE;
+        result.double_num = double(*this) + double(N1);
     }
     
     return result;
@@ -156,33 +182,45 @@ number number::operator+(const number N1) const
 number number::operator-(const number N1) const
 {
     number result = number(SafeInt<int64_t> (0));
-    
-    if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
+    try
     {
-        result = number(integer - N1.integer);
-    }
-    else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
-    {
-        result = number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
-    }
-    else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result = number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
-    }
-    else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result = number(0, 0, 1);
-        result.fraction.integer = fraction.integer - N1.fraction.integer;
-        result.fraction.numerator =
-            N1.fraction.denominator * fraction.numerator - N1.fraction.numerator * fraction.denominator;
-        result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
+        if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
+            result = number(integer - N1.integer);
         }
+        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        {
+            result = number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
+        }
+        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result = number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
+        }
+        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result = number(0, 0, 1);
+            result.fraction.integer = fraction.integer - N1.fraction.integer;
+            result.fraction.numerator =
+                N1.fraction.denominator * fraction.numerator - N1.fraction.numerator * fraction.denominator;
+            result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
+        {
+            result.type = DOUBLE_TYPE;
+            result.double_num = double(*this) - double(N1);
+        }
+    }
+    catch (SafeIntException& err)
+    {
+        result.type = DOUBLE_TYPE;
+        result.double_num = double(*this) - double(N1);
     }
     
     return result;
@@ -192,50 +230,63 @@ number number::operator*(const number N1) const
 {
     number result = number(0, 0, 1);
     
-    if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
+    try
     {
-        result = number(integer * N1.integer);
-    }
-    else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
-    {
-        result.fraction.integer = fraction.integer * N1.integer;
-        result.fraction.numerator = N1.integer * fraction.numerator;
-        result.fraction.denominator = fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
+        if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
+            result = number(integer * N1.integer);
+        }
+        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        {
+            result.fraction.integer = fraction.integer * N1.integer;
+            result.fraction.numerator = N1.integer * fraction.numerator;
+            result.fraction.denominator = fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result.fraction.integer = N1.fraction.integer * integer;
+            result.fraction.numerator = integer * N1.fraction.numerator;
+            result.fraction.denominator = N1.fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result.fraction.integer = N1.fraction.integer * fraction.integer;
+            result.fraction.numerator = N1.fraction.numerator * fraction.numerator
+                + N1.fraction.denominator * N1.fraction.integer * fraction.numerator +
+                fraction.denominator * fraction.integer * N1.fraction.numerator;
+            result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
+        {
+            result.type = DOUBLE_TYPE;
+            result.double_num = double(*this) * double(N1);
         }
     }
-    else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+    catch (SafeIntException& err)
     {
-        result.fraction.integer = N1.fraction.integer * integer;
-        result.fraction.numerator = integer * N1.fraction.numerator;
-        result.fraction.denominator = N1.fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
-        {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
-        }
-    }
-    else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result.fraction.integer = N1.fraction.integer * fraction.integer;
-        result.fraction.numerator = N1.fraction.numerator * fraction.numerator
-            + N1.fraction.denominator * N1.fraction.integer * fraction.numerator +
-            fraction.denominator * fraction.integer * N1.fraction.numerator;
-        result.fraction.denominator = N1.fraction.denominator * fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
-        {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
-        }
+        result.type = DOUBLE_TYPE;
+        result.double_num = double(*this) * double(N1);
     }
     
     return result;
@@ -245,52 +296,65 @@ number number::operator/(const number N1) const
 {
     number result = number(0, 0, 1);
     
-    if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
+    try
     {
-        result = number(integer, N1.integer);
-        if (result.fraction.numerator == 0)
+        if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
+            result = number(integer, N1.integer);
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        {
+            result.fraction.numerator = fraction.numerator + N1.integer * fraction.denominator;
+            result.fraction.denominator = N1.integer * fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result.fraction.numerator = integer * N1.fraction.denominator;
+            result.fraction.denominator = N1.fraction.numerator + integer * N1.fraction.denominator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        {
+            result.fraction.numerator = fraction.integer * fraction.denominator * N1.fraction.denominator
+                + N1.fraction.denominator * fraction.numerator;
+            result.fraction.denominator = N1.fraction.denominator * fraction.denominator * N1.fraction.integer
+                + fraction.denominator * N1.fraction.numerator;
+        
+            result.fraction.normalise();
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = INTEGER_TYPE;
+            }
+        }
+        else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
+        {
+            result.type = DOUBLE_TYPE;
+            result.double_num = double(*this) / double(N1);
         }
     }
-    else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+    catch (SafeIntException& err)
     {
-        result.fraction.numerator = fraction.numerator + N1.integer * fraction.denominator;
-        result.fraction.denominator = N1.integer * fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
-        {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
-        }
-    }
-    else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result.fraction.numerator = integer * N1.fraction.denominator;
-        result.fraction.denominator = N1.fraction.numerator + integer * N1.fraction.denominator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
-        {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
-        }
-    }
-    else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
-    {
-        result.fraction.numerator = fraction.integer * fraction.denominator * N1.fraction.denominator
-            + N1.fraction.denominator * fraction.numerator;
-        result.fraction.denominator = N1.fraction.denominator * fraction.denominator * N1.fraction.integer
-            + fraction.denominator * N1.fraction.numerator;
-        
-        result.fraction.normalise();
-        if (result.fraction.numerator == 0)
-        {
-            result.integer = result.fraction.integer;
-            result.type = INTEGER_TYPE;
-        }
+        result.type = DOUBLE_TYPE;
+        result.double_num = double(*this) / double(N1);
     }
     
     return result;
@@ -305,17 +369,44 @@ number::number()
 number& number::operator=(const number& Other)
 {
     type = Other.type;
-    if (type == INTEGER_TYPE)
+    switch (type)
     {
-        integer = Other.integer;
-    }
-    else if (type == FRACTION_TYPE)
-    {
-        fraction = Other.fraction;
-    }
-    else
-    {
-        assert(true);
+        case INTEGER_TYPE:
+        {
+            integer = Other.integer;
+            break;
+        }
+        case FRACTION_TYPE:
+        {
+            fraction = Other.fraction;
+            break;
+        }
+        case DOUBLE_TYPE:
+        {
+            double_num = Other.double_num;
+            break;
+        }
     }
     return *this;
+}
+
+number::operator double() const
+{
+    switch (type)
+    {
+        case INTEGER_TYPE:
+        {
+            return double(integer);
+        }
+        case FRACTION_TYPE:
+        {
+            return double(fraction);
+        }
+        case DOUBLE_TYPE:
+        {
+            return double_num;
+        }
+    }
+    
+    return 0;
 }

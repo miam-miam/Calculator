@@ -46,8 +46,7 @@ expression::expression(std::string_view &String)
 {
     tokenise(String);
     infixToPostfix();
-    number result = evaluatePostfix();
-    std::cout << result << std::endl;
+    result = evaluatePostfix();
 }
 
 void expression::infixToPostfix()
@@ -228,3 +227,8 @@ token::token(const number& N1)
     type = NUMBER;
 }
 
+std::ostream &operator<<(std::ostream &Strm, const expression &E1)
+{
+    Strm << E1.result;
+    return Strm;
+}

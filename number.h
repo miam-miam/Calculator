@@ -38,13 +38,14 @@ struct number
     {
         INTEGER_TYPE,
         FRACTION_TYPE,
-        FLOAT_TYPE
+        DOUBLE_TYPE
     };
     NumberType type;
     union
     {
         SafeInt<int64_t> integer;
         fraction fraction{};
+        double double_num;
     };
     
     number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
@@ -52,6 +53,9 @@ struct number
     explicit number(SafeInt<int64_t> GivenInt);
     explicit number(const std::string_view &Number);
     number();
+    
+    explicit operator double() const;
+    
     number& operator=(const number& Other);
     
     number operator+(number) const;
