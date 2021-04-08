@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
+#include "safeInt.hpp"
 
 // Data structures
 #include <string>

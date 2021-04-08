@@ -22,7 +22,7 @@ struct token
 {
     number num;
     TokenType type;
-    explicit token(number N1);
+    explicit token(const number& N1);
     explicit token(char C1);
     token();
 };

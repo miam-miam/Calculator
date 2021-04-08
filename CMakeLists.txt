@@ -3,6 +3,6 @@ project(Calculator)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(Calculator main.cpp number.h number.cpp myMath.h myMath.cpp expression.h expression.cpp)
+add_executable(Calculator main.cpp number.h number.cpp myMath.h myMath.cpp expression.h expression.cpp safeInt.hpp)
 
 target_precompile_headers(Calculator PRIVATE pch.h)

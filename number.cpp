@@ -1,14 +1,14 @@
 #include "number.h"
 #include "myMath.h"
 
-fraction::fraction(int64_t GivenInt, int64_t GivenNum, int64_t GivenDen)    // Not unused
+fraction::fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)    // Not unused
 {
     integer = GivenInt;
     numerator = GivenNum;
     denominator = GivenDen;
 }
 
-fraction::fraction(int64_t GivenNum, int64_t GivenDen)  // Not unused
+fraction::fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)  // Not unused
 {
     integer = 0;
     numerator = GivenNum;
@@ -44,7 +44,7 @@ void fraction::normalise()
         return;
     }
     
-    const int64_t gcd = std::gcd((int64_t) numerator, (int64_t) denominator);
+    const SafeInt<int64_t> gcd = std::gcd((int64_t) numerator, (int64_t) denominator);
     
     if (gcd != 1)
     {
@@ -58,26 +58,26 @@ std::ostream &operator<<(std::ostream &Strm, const number &N1)
 {
     if (N1.type == number::INTEGER_TYPE)
     {
-        Strm << N1.integer;
+        Strm << int64_t(N1.integer);
     }
     else if (N1.type == number::FRACTION_TYPE && N1.fraction.denominator == 1)
     {
-        Strm << N1.fraction.integer;
+        Strm << int64_t(N1.fraction.integer);
     }
     else if (N1.type == number::FRACTION_TYPE)
     {
-        Strm << N1.fraction.integer << "+" << N1.fraction.numerator << "/" << N1.fraction.denominator;
+        Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
     }
     return Strm;
 }
 
-number::number(int64_t GivenInt, int64_t GivenNum, int64_t GivenDen)
+number::number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
 {
     type = FRACTION_TYPE;
     fraction = {GivenInt, GivenNum, GivenDen};
 }
 
-number::number(int64_t GivenNum, int64_t GivenDen)
+number::number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
 {
     type = FRACTION_TYPE;
     fraction = {GivenNum, GivenDen};
@@ -89,7 +89,7 @@ number::number(int64_t GivenNum, int64_t GivenDen)
     
 }
 
-number::number(int64_t GivenInt)
+number::number(SafeInt<int64_t> GivenInt)
 {
     type = INTEGER_TYPE;
     integer = GivenInt;
@@ -155,7 +155,7 @@ number number::operator+(const number N1) const
 
 number number::operator-(const number N1) const
 {
-    number result = number(0);
+    number result = number(SafeInt<int64_t> (0));
     
     if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
     {
@@ -300,4 +300,22 @@ number::number()
 {
     type = INTEGER_TYPE;
     integer = 0;
+}
+
+number& number::operator=(const number& Other)
+{
+    type = Other.type;
+    if (type == INTEGER_TYPE)
+    {
+        integer = Other.integer;
+    }
+    else if (type == FRACTION_TYPE)
+    {
+        fraction = Other.fraction;
+    }
+    else
+    {
+        assert(true);
+    }
+    return *this;
 }

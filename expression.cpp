@@ -222,7 +222,7 @@ token::token()
     type = NONE;
 }
 
-token::token(number N1)
+token::token(const number& N1)
 {
     num = N1;
     type = NUMBER;

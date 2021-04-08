@@ -4,9 +4,9 @@
 
 struct fraction
 {
-    fraction(int64_t GivenInt, int64_t GivenNum, int64_t GivenDen);
+    fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     
-    fraction(int64_t GivenNum, int64_t GivenDen);
+    fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     
     fraction()
     {
@@ -15,18 +15,18 @@ struct fraction
         denominator = 1;
     }
     
-    int64_t integer;
-    int64_t numerator;
-    int64_t denominator;
+    SafeInt<int64_t> integer;
+    SafeInt<int64_t> numerator;
+    SafeInt<int64_t> denominator;
     
-    explicit operator int64_t() const
+    explicit operator SafeInt<int64_t>() const
     { return integer; }
     
     explicit operator float() const
-    { return integer + (float) numerator / denominator; }
+    { return float(integer) +  float(numerator) / float(denominator); }
     
     explicit operator double() const
-    { return integer + double(numerator) / denominator; }
+    { return double(integer) + double(numerator) / double(denominator); }
     
     void normalise();
     
@@ -37,20 +37,22 @@ struct number
     enum NumberType
     {
         INTEGER_TYPE,
-        FRACTION_TYPE
+        FRACTION_TYPE,
+        FLOAT_TYPE
     };
     NumberType type;
     union
     {
-        int64_t integer;
+        SafeInt<int64_t> integer;
         fraction fraction{};
     };
     
-    number(int64_t GivenInt, int64_t GivenNum, int64_t GivenDen);
-    number(int64_t GivenNum, int64_t GivenDen);
-    explicit number(int64_t GivenInt);
+    number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    explicit number(SafeInt<int64_t> GivenInt);
     explicit number(const std::string_view &Number);
     number();
+    number& operator=(const number& Other);
     
     number operator+(number) const;
     
