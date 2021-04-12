@@ -67,10 +67,12 @@ std::ostream &operator<<(std::ostream &Strm, const number &N1)
     else if (N1.type == number::FRACTION_TYPE && N1.fraction.denominator == 1)
     {
         Strm << int64_t(N1.fraction.integer);
+        assert(0);
     }
     else if (N1.type == number::FRACTION_TYPE)
     {
-        Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
+        
+        Strm << int64_t(N1.fraction.integer) << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
     }
     else if (N1.type == number::DOUBLE_TYPE)
     {

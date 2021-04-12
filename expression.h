@@ -20,24 +20,22 @@ const int Precedence[] = {0, 0, 2, 2, 3, 3, 1, 0};
 
 struct token
 {
-    number num;
+    number* num;
     TokenType type;
-    explicit token(const number& N1);
+    explicit token(number* N1);
     explicit token(char C1);
     token();
 };
 
 struct expression
 {
-    std::queue<token> infix_tokens;
-    std::deque<token> postfix_tokens;
     number result;
     
     explicit expression(std::string_view &String);
     
-    void tokenise(std::string_view &String);
-    void infixToPostfix();
-    number evaluatePostfix();
+    static void tokenise(std::queue<token> &InfixTokens, std::string_view &String);
+    static void infixToPostfix(std::deque<token> &PostfixTokens, std::queue<token> &InfixTokens);
+    static number evaluatePostfix(std::deque<token> &PostfixTokens);
 };
 
 std::ostream &operator<<(std::ostream &Strm, const expression &);

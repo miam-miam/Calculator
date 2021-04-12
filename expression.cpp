@@ -2,7 +2,7 @@
 #include "expression.h"
 #include <algorithm>
 
-void expression::tokenise(std::string_view &String)
+void expression::tokenise(std::queue<token> &InfixTokens, std::string_view &String)
 {
     bool decimalPoint;
     for (int i = 0; i < String.length(); i++)
@@ -36,48 +36,50 @@ void expression::tokenise(std::string_view &String)
                     break;
                 }
             }
-            number tempNumber;
+            number* tempNumber = new number;
             if (space)
             {
                 std::string stringNumber = String.substr(i, j - i).data();
                 stringNumber.erase(std::remove(stringNumber.begin(), stringNumber.end(), ' '), stringNumber.end());
-                tempNumber = number(std::string_view(stringNumber));
+                *tempNumber = number(std::string_view(stringNumber));
             }
             else
             {
-                tempNumber = number(String.substr(i, j - i));
+                *tempNumber = number(String.substr(i, j - i));
             }
-            infix_tokens.emplace(tempNumber);
+            InfixTokens.emplace(tempNumber);
             i = j - 1;
     
         }
         else if (String[i] != ' ')
         {
-            infix_tokens.emplace(String[i]);
+            InfixTokens.emplace(String[i]);
         }
     }
 }
 
 expression::expression(std::string_view &String)
 {
-    tokenise(String);
-    infixToPostfix();
-    result = evaluatePostfix();
+    std::queue<token> infixTokens;
+    std::deque<token> postfixTokens;
+    tokenise(infixTokens, String);
+    infixToPostfix(postfixTokens, infixTokens);
+    result = evaluatePostfix(postfixTokens);
 }
 
-void expression::infixToPostfix()
+void expression::infixToPostfix(std::deque<token> &PostfixTokens, std::queue<token> &InfixTokens)
 {
     std::vector<token> operatorStack;
     token operatorOperator;
-    while (!infix_tokens.empty())
+    while (!InfixTokens.empty())
     {
-        token tokenInfix = infix_tokens.front();
-        infix_tokens.pop();
+        token tokenInfix = InfixTokens.front();
+        InfixTokens.pop();
         switch (tokenInfix.type)
         {
             case NUMBER:
             {
-                postfix_tokens.push_back(tokenInfix);
+                PostfixTokens.push_back(tokenInfix);
                 break;
             }
             case PLUS:
@@ -90,7 +92,7 @@ void expression::infixToPostfix()
                         >= Precedence[tokenInfix.type])) //If implementing powers precedence cannot be equal as it is right associative and not left.
                 {
                     operatorStack.pop_back();
-                    postfix_tokens.push_back(operatorOperator);
+                    PostfixTokens.push_back(operatorOperator);
                 }
                 operatorStack.push_back(tokenInfix);
                 break;
@@ -105,7 +107,7 @@ void expression::infixToPostfix()
                 while ((operatorOperator = operatorStack.back()).type != LBRACKET)
                 {
                     operatorStack.pop_back();
-                    postfix_tokens.push_back(operatorOperator);
+                    PostfixTokens.push_back(operatorOperator);
                     if (operatorStack.empty())
                     {
                         throw UnmatchedBracket();
@@ -126,17 +128,16 @@ void expression::infixToPostfix()
         {
             throw UnmatchedBracket();
         }
-        postfix_tokens.push_back(operatorOperator);
+        PostfixTokens.push_back(operatorOperator);
         operatorStack.pop_back();
     }
-    
 }
 
-number expression::evaluatePostfix()
+number expression::evaluatePostfix(std::deque<token> &PostfixTokens)
 {
     //TODO do deep copy
-    std::vector<number> resultVec;
-    for (auto it = postfix_tokens.begin(); it != postfix_tokens.end(); ++it)
+    std::vector<number*> resultVec;
+    for (auto it = PostfixTokens.begin(); it != PostfixTokens.end(); ++it)
     {
         switch (it->type)
         {
@@ -147,38 +148,46 @@ number expression::evaluatePostfix()
             }
             case PLUS:
             {
-                number x = resultVec.back();
+                number* x = resultVec.back();
                 resultVec.pop_back();
-                number y = resultVec.back();
+                number* y = resultVec.back();
                 resultVec.pop_back();
-                resultVec.push_back(y + x);
+                *x = *y + *x;
+                resultVec.push_back(x);
+                delete y;
                 break;
             }
             case MINUS:
             {
-                number x = resultVec.back();
+                number* x = resultVec.back();
                 resultVec.pop_back();
-                number y = resultVec.back();
+                number* y = resultVec.back();
                 resultVec.pop_back();
-                resultVec.push_back(y - x);
+                *x = *y - *x;
+                resultVec.push_back(x);
+                delete y;
                 break;
             }
             case MULTIPLY:
             {
-                number x = resultVec.back();
+                number* x = resultVec.back();
                 resultVec.pop_back();
-                number y = resultVec.back();
+                number* y = resultVec.back();
                 resultVec.pop_back();
-                resultVec.push_back(y * x);
+                *x = *y * *x;
+                resultVec.push_back(x);
+                delete y;
                 break;
             }
             case DIVIDE:
             {
-                number x = resultVec.back();
+                number* x = resultVec.back();
                 resultVec.pop_back();
-                number y = resultVec.back();
+                number* y = resultVec.back();
                 resultVec.pop_back();
-                resultVec.push_back(y / x);
+                *x = *y / *x;
+                resultVec.push_back(x);
+                delete y;
                 break;
             }
             default:
@@ -187,8 +196,9 @@ number expression::evaluatePostfix()
             }
         }
     }
-    
-    return resultVec.front();
+    number result = *resultVec.front();
+    delete resultVec.front();
+    return result;
 }
 
 token::token(char C1)
@@ -237,7 +247,7 @@ token::token()
     type = NONE;
 }
 
-token::token(const number& N1)
+token::token(number* N1)
 {
     num = N1;
     type = NUMBER;

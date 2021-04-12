@@ -29,7 +29,6 @@ struct fraction
     { return double(integer) + double(numerator) / double(denominator); }
     
     void normalise();
-    
 };
 
 struct number
@@ -44,7 +43,7 @@ struct number
     union
     {
         SafeInt<int64_t> integer;
-        fraction fraction{};
+        fraction fraction;
         double double_num;
     };
     
