@@ -66,13 +66,12 @@ std::ostream &operator<<(std::ostream &Strm, const number &N1)
     }
     else if (N1.type == number::FRACTION_TYPE && N1.fraction.denominator == 1)
     {
-        Strm << int64_t(N1.fraction.integer);
-        assert(0);
+        assert(!Strm << int64_t(N1.fraction.integer));
     }
     else if (N1.type == number::FRACTION_TYPE)
     {
         
-        Strm << int64_t(N1.fraction.integer) << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
+        Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
     }
     else if (N1.type == number::DOUBLE_TYPE)
     {
@@ -119,12 +118,17 @@ number::number(const std::string_view &Number, int Offset)  // Assumes there is 
             type = FRACTION_TYPE;
             fraction.integer = std::stoll(Number.substr(0, Offset).data());
             fraction.numerator = std::stoll(Number.substr(Offset + 1).data());
+            if (fraction.numerator == 0)
+            {
+                type = INTEGER_TYPE;
+                integer = fraction.integer;
+                return;
+            }
             if (fraction.integer < 0)
             {
                 fraction.numerator = -fraction.numerator;
             }
-        
-            fraction.denominator = powll(10LL, Number.length() - (Offset + 1));
+            fraction.denominator = tenPowll(Number.length() - (Offset + 1));
         
             fraction.normalise();
         }
@@ -136,8 +140,24 @@ number::number(const std::string_view &Number, int Offset)  // Assumes there is 
     }
     catch (const std::out_of_range &e)
     {
-        type = DOUBLE_TYPE;
-        double_num = std::stod(Number.data());
+        try
+        {
+            type = DOUBLE_TYPE;
+            double_num = std::stod(Number.data());
+        }
+        catch (const std::out_of_range &e)
+        {
+            if (Number[0] == '0')
+            {
+                type = INTEGER_TYPE;
+                integer = 0;
+            }
+            else
+            {
+                throw Overflow();
+            }
+        }
+
     }
 
 }

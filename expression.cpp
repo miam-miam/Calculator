@@ -11,6 +11,7 @@ void expression::tokenise(std::queue<token> &InfixTokens, std::string_view &Stri
         {
             decimalPoint = false;
             bool space = false;
+            int decimalPointIndex = -1;
             int j = i;
             for (; j < String.length(); j++)
             {
@@ -21,6 +22,7 @@ void expression::tokenise(std::queue<token> &InfixTokens, std::string_view &Stri
                 else if (!decimalPoint && (String[j] == '.'))
                 {
                     decimalPoint = true;
+                    decimalPointIndex = j;
                 }
                 else if (decimalPoint && (String[j] == '.'))
                 {
@@ -41,11 +43,11 @@ void expression::tokenise(std::queue<token> &InfixTokens, std::string_view &Stri
             {
                 std::string stringNumber = String.substr(i, j - i).data();
                 stringNumber.erase(std::remove(stringNumber.begin(), stringNumber.end(), ' '), stringNumber.end());
-                *tempNumber = number(std::string_view(stringNumber));
+                *tempNumber = number(std::string_view(stringNumber), decimalPointIndex - i);
             }
             else
             {
-                *tempNumber = number(String.substr(i, j - i));
+                *tempNumber = number(String.substr(i, j - i), decimalPointIndex - i);
             }
             InfixTokens.emplace(tempNumber);
             i = j - 1;

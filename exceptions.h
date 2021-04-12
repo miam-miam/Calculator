@@ -29,12 +29,12 @@ class UnknownOperator: public CalculatorException
     [[nodiscard]] char const * what() const override { return "Unknown operator"; }
 };
 
-class IncorrectOperatorUsage: CalculatorException
+class IncorrectOperatorUsage: public CalculatorException
 {
     [[nodiscard]] char const * what() const override { return "Incorrect operator usage"; }
 };
 
-class InvalidDecimalPoint: CalculatorException
+class InvalidDecimalPoint: public CalculatorException
 {
     [[nodiscard]] char const * what() const override { return "Invalid decimal point"; }
 };

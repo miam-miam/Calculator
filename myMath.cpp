@@ -1,11 +1,17 @@
 #include "myMath.h"
 
-int64_t powll(int64_t Base, unsigned long long Exp)
+#define MAX_LONG_LONG_LOG_10 18
+
+int64_t tenPowll(unsigned long long Exp)
 {
-    int64_t count = Base;
+    if (Exp > MAX_LONG_LONG_LOG_10)
+    {
+        throw std::out_of_range("Too large an Exponent.");
+    }
+    int64_t count = 10;
     for (int i = 1; i < Exp; i++)
     {
-        count *= Base;
+        count *= 10;
     }
     return count;
 }
