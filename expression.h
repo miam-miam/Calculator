@@ -18,26 +18,26 @@ enum TokenType
 // Token type enum will be index
 const int Precedence[] = {0, 0, 2, 2, 3, 3, 1, 0};
 
-struct token
+struct Token
 {
-    number* num;
+    Number* num;
     TokenType type;
-    explicit token(number* N1);
-    explicit token(char C1);
-    token();
+    explicit Token(Number* N1);
+    explicit Token(char C1);
+    Token();
 };
 
-struct expression
+struct Expression
 {
-    number result;
+    Number result;
     
-    explicit expression(std::string_view &String);
+    explicit Expression(std::string_view &String);
     
-    static void tokenise(std::queue<token> &InfixTokens, std::string_view &String);
-    static void infixToPostfix(std::deque<token> &PostfixTokens, std::queue<token> &InfixTokens);
-    static number evaluatePostfix(std::deque<token> &PostfixTokens);
+    static void tokenise(std::queue<Token> &InfixTokens, std::string_view &String);
+    static void infixToPostfix(std::deque<Token> &PostfixTokens, std::queue<Token> &InfixTokens);
+    static Number evaluatePostfix(std::deque<Token> &PostfixTokens);
 };
 
-std::ostream &operator<<(std::ostream &Strm, const expression &);
+std::ostream &operator<<(std::ostream &Strm, const Expression &);
 
 #endif //CALCULATOR__EXPRESSION_H

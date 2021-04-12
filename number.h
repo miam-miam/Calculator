@@ -2,13 +2,13 @@
 #ifndef CALCULATOR__NUMBER_H
 #define CALCULATOR__NUMBER_H
 
-struct fraction
+struct Fraction
 {
-    fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    Fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     
-    fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    Fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     
-    fraction()
+    Fraction()
     {
         integer = 0;
         numerator = 0;
@@ -31,7 +31,7 @@ struct fraction
     void normalise();
 };
 
-struct number
+struct Number
 {
     enum NumberType
     {
@@ -43,29 +43,29 @@ struct number
     union
     {
         SafeInt<int64_t> integer;
-        fraction fraction;
+        Fraction fraction;
         double double_num;
     };
     
-    number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
-    number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
-    explicit number(SafeInt<int64_t> GivenInt);
-    explicit number(const std::string_view &Number, int Offset=-2);
-    number();
+    Number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
+    explicit Number(SafeInt<int64_t> GivenInt);
+    explicit Number(const std::string_view &Number, int Offset=-2);
+    Number();
     
     explicit operator double() const;
     
-    number& operator=(const number& Other);
+    Number& operator=(const Number& Other);
     
-    number operator+(number) const;
+    Number operator+(Number) const;
     
-    number operator-(number) const;
+    Number operator-(Number) const;
     
-    number operator*(number) const;
+    Number operator*(Number) const;
     
-    number operator/(number) const;
+    Number operator/(Number) const;
 };
 
-std::ostream &operator<<(std::ostream &Strm, const number &);
+std::ostream &operator<<(std::ostream &Strm, const Number &);
 
 #endif //CALCULATOR__NUMBER_H

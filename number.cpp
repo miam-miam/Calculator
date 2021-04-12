@@ -1,14 +1,14 @@
 #include "number.h"
 #include "myMath.h"
 
-fraction::fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)    // Not unused
+Fraction::Fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)    // Not unused
 {
     integer = GivenInt;
     numerator = GivenNum;
     denominator = GivenDen;
 }
 
-fraction::fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)  // Not unused
+Fraction::Fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)  // Not unused
 {
     integer = 0;
     numerator = GivenNum;
@@ -16,7 +16,7 @@ fraction::fraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)  // Not
     normalise();
 }
 
-void fraction::normalise()
+void Fraction::normalise()
 {
     if (denominator == 0)
     {
@@ -58,35 +58,35 @@ void fraction::normalise()
     
 }
 
-std::ostream &operator<<(std::ostream &Strm, const number &N1)
+std::ostream &operator<<(std::ostream &Strm, const Number &N1)
 {
-    if (N1.type == number::INTEGER_TYPE)
+    if (N1.type == Number::INTEGER_TYPE)
     {
         Strm << int64_t(N1.integer);
     }
-    else if (N1.type == number::FRACTION_TYPE && N1.fraction.denominator == 1)
+    else if (N1.type == Number::FRACTION_TYPE && N1.fraction.denominator == 1)
     {
         assert(!Strm << int64_t(N1.fraction.integer));
     }
-    else if (N1.type == number::FRACTION_TYPE)
+    else if (N1.type == Number::FRACTION_TYPE)
     {
         
         Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
     }
-    else if (N1.type == number::DOUBLE_TYPE)
+    else if (N1.type == Number::DOUBLE_TYPE)
     {
         Strm << N1.double_num;
     }
     return Strm;
 }
 
-number::number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
+Number::Number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
 {
     type = FRACTION_TYPE;
     fraction = {GivenInt, GivenNum, GivenDen};
 }
 
-number::number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
+Number::Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
 {
     type = FRACTION_TYPE;
     fraction = {GivenNum, GivenDen};
@@ -98,13 +98,13 @@ number::number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
     
 }
 
-number::number(SafeInt<int64_t> GivenInt)
+Number::Number(SafeInt<int64_t> GivenInt)
 {
     type = INTEGER_TYPE;
     integer = GivenInt;
 }
 
-number::number(const std::string_view &Number, int Offset)  // Assumes there is only one decimal point
+Number::Number(const std::string_view &Number, int Offset)  // Assumes there is only one decimal point
 // For Offset -2 means not searched and -1 not found
 {
     if (Offset == -2)
@@ -162,23 +162,23 @@ number::number(const std::string_view &Number, int Offset)  // Assumes there is 
 
 }
 
-number number::operator+(const number N1) const
+Number Number::operator+(const Number N1) const
 {
-    number result = number(0, 0, 1);
+    Number result = Number(0, 0, 1);
     
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(integer + N1.integer);
+            result = Number(integer + N1.integer);
         }
         else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
+            result = Number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
         }
         else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result = number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
+            result = Number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
         }
         else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
@@ -209,26 +209,26 @@ number number::operator+(const number N1) const
     return result;
 }
 
-number number::operator-(const number N1) const
+Number Number::operator-(const Number N1) const
 {
-    number result = number(SafeInt<int64_t> (0));
+    Number result = Number(SafeInt<int64_t> (0));
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(integer - N1.integer);
+            result = Number(integer - N1.integer);
         }
         else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
+            result = Number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
         }
         else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result = number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
+            result = Number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
         }
         else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
-            result = number(0, 0, 1);
+            result = Number(0, 0, 1);
             result.fraction.integer = fraction.integer - N1.fraction.integer;
             result.fraction.numerator =
                 N1.fraction.denominator * fraction.numerator - N1.fraction.numerator * fraction.denominator;
@@ -256,15 +256,15 @@ number number::operator-(const number N1) const
     return result;
 }
 
-number number::operator*(const number N1) const
+Number Number::operator*(const Number N1) const
 {
-    number result = number(0, 0, 1);
+    Number result = Number(0, 0, 1);
     
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(integer * N1.integer);
+            result = Number(integer * N1.integer);
         }
         else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
@@ -322,15 +322,15 @@ number number::operator*(const number N1) const
     return result;
 }
 
-number number::operator/(const number N1) const
+Number Number::operator/(const Number N1) const
 {
-    number result = number(0, 0, 1);
+    Number result = Number(0, 0, 1);
     
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = number(integer, N1.integer);
+            result = Number(integer, N1.integer);
             if (result.fraction.numerator == 0)
             {
                 result.integer = result.fraction.integer;
@@ -395,13 +395,13 @@ number number::operator/(const number N1) const
     return result;
 }
 
-number::number()
+Number::Number()
 {
     type = INTEGER_TYPE;
     integer = 0;
 }
 
-number& number::operator=(const number& Other)
+Number& Number::operator=(const Number& Other)
 {
     type = Other.type;
     switch (type)
@@ -425,7 +425,7 @@ number& number::operator=(const number& Other)
     return *this;
 }
 
-number::operator double() const
+Number::operator double() const
 {
     switch (type)
     {

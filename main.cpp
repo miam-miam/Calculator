@@ -20,7 +20,7 @@ int main()
             {
                 break;
             }
-            auto e = expression(userView);
+            auto e = Expression(userView);
             std::cout << e << std::endl;
         }
         catch (CalculatorException &e)
