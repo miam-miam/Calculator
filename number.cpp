@@ -59,6 +59,11 @@ void Fraction::normalise()
     
 }
 
+Fraction::operator SimpleFraction() const
+{
+    return SimpleFraction(numerator + integer * denominator, denominator);
+}
+
 std::ostream &operator<<(std::ostream &Strm, const Number &N1)
 {
     if (N1.type == Number::INTEGER_TYPE)
@@ -490,4 +495,83 @@ Number::operator double() const
     }
     
     return 0;
+}
+
+Number::Number(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent)
+{
+    type = POWER_TYPE;
+    power = Power(GivenMultiplicand, GivenBase, GivenExponent);
+}
+
+Number::Number(Fraction GivenFraction)
+{
+    type = FRACTION_TYPE;
+    fraction = GivenFraction;
+}
+
+SimpleFraction::SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
+{
+    numerator = GivenNum;
+    denominator = GivenDen;
+    normalise();
+    numerator += GivenInt * GivenDen;
+}
+
+SimpleFraction::SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
+{
+    numerator = GivenNum;
+    denominator = GivenDen;
+}
+
+void SimpleFraction::normalise()
+{
+    if (denominator == 0)
+    {
+        throw DivisionByZero();
+    }
+    
+    if (denominator < 0)
+    {
+        numerator *= -1;
+        denominator *= -1;
+    }
+    
+    if (numerator == 0)
+    {
+        denominator = 1;
+        return;
+    }
+    
+    const SafeInt<int64_t> gcd = std::gcd((int64_t) numerator, (int64_t) denominator);
+    
+    if (gcd != 1)
+    {
+        numerator = numerator / gcd;
+        denominator = denominator / gcd;
+    }
+}
+
+Power::operator double() const
+{
+    std::feclearexcept(FE_OVERFLOW);
+    const double result = pow(double (base) , double (exponent));
+    if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+    {
+        throw Overflow();
+    }
+    return result;
+}
+
+Power::Power()
+{
+    multiplicand = Fraction(1,0,1);
+    base = 1;
+    exponent = SimpleFraction(1,1);
+}
+
+Power::Power(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent)
+{
+    multiplicand = GivenMultiplicand;
+    base = GivenBase;
+    exponent = GivenExponent;
 }

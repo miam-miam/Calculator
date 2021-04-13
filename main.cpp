@@ -1,5 +1,6 @@
 #include "number.h"
 #include "expression.h"
+#include "myMath.h"
 
 int main()
 {
@@ -7,6 +8,11 @@ int main()
     // Setting the precision to 13 decimal places
     std::cout << std::setprecision(14);
     std::cout << "Hello, Calculator!" << std::endl;
+    
+    std::cout << Number(binomialSeries(Fraction(26,1,5), 9)) << std::endl;
+    std::cout << Number(binomialSeries(Fraction(5,9,4), 2)) << std::endl;
+    std::cout << Number(binomialSeries(Fraction(5,9,4), 1)) << std::endl;
+    std::cout << Number(binomialSeries(Fraction(1,1,2), 2)) << std::endl;
     
     while (true)
     {

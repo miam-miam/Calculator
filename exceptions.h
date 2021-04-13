@@ -29,6 +29,11 @@ class IncorrectOperatorUsage: public CalculatorException
     [[nodiscard]] char const * what() const noexcept override { return "Incorrect operator usage"; }
 };
 
+class PowerError: public CalculatorException
+{
+    [[nodiscard]] char const * what() const noexcept override { return "Cannot compute 0^0"; }
+};
+
 class InvalidDecimalPoint: public CalculatorException
 {
     [[nodiscard]] char const * what() const noexcept override { return "Invalid decimal point"; }
