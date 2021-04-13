@@ -24,6 +24,7 @@ struct Token
     TokenType type;
     explicit Token(Number* N1);
     explicit Token(char C1);
+    explicit Token(TokenType TokenType);
     Token();
 };
 

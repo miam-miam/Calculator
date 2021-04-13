@@ -9,11 +9,6 @@ class Overflow: public CalculatorException
     [[nodiscard]] char const * what() const noexcept override { return "Overflow"; }
 };
 
-class Underflow: public CalculatorException
-{
-    [[nodiscard]] char const * what() const noexcept override { return "Underflow"; }
-};
-
 class DivisionByZero: public CalculatorException
 {
     [[nodiscard]] char const * what() const noexcept override { return "Division by zero"; }

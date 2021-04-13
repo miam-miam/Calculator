@@ -277,6 +277,11 @@ Token::Token(Number* N1)
     type = NUMBER;
 }
 
+Token::Token(TokenType TokenType)
+{
+    type = TokenType;
+}
+
 std::ostream &operator<<(std::ostream &Strm, const Expression &E1)
 {
     Strm << E1.result;

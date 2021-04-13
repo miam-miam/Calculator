@@ -1,3 +1,4 @@
+#include <cfenv>
 #include "number.h"
 #include "myMath.h"
 
@@ -197,13 +198,23 @@ Number Number::operator+(const Number N1) const
         else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
         {
             result.type = DOUBLE_TYPE;
+            std::feclearexcept(FE_OVERFLOW);
             result.double_num = double(*this) + double(N1);
+            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+            {
+                throw Overflow();
+            }
         }
     }
     catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
+        std::feclearexcept(FE_OVERFLOW);
         result.double_num = double(*this) + double(N1);
+        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+        {
+            throw Overflow();
+        }
     }
     
     return result;
@@ -244,13 +255,23 @@ Number Number::operator-(const Number N1) const
         else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
         {
             result.type = DOUBLE_TYPE;
+            std::feclearexcept(FE_OVERFLOW);
             result.double_num = double(*this) - double(N1);
+            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+            {
+                throw Overflow();
+            }
         }
     }
     catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
+        std::feclearexcept(FE_OVERFLOW);
         result.double_num = double(*this) - double(N1);
+        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+        {
+            throw Overflow();
+        }
     }
     
     return result;
@@ -310,13 +331,23 @@ Number Number::operator*(const Number N1) const
         else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
         {
             result.type = DOUBLE_TYPE;
+            std::feclearexcept(FE_OVERFLOW);
             result.double_num = double(*this) * double(N1);
+            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+            {
+                throw Overflow();
+            }
         }
     }
     catch (const SafeIntException& err)
     {
         result.type = DOUBLE_TYPE;
+        std::feclearexcept(FE_OVERFLOW);
         result.double_num = double(*this) * double(N1);
+        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+        {
+            throw Overflow();
+        }
     }
     
     return result;
@@ -383,13 +414,28 @@ Number Number::operator/(const Number N1) const
                 throw DivisionByZero();
             }
             result.type = DOUBLE_TYPE;
+            std::feclearexcept(FE_OVERFLOW);
             result.double_num = double(*this) / doubleN1;
+            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+            {
+                throw Overflow();
+            }
         }
     }
     catch (const SafeIntException& err)
     {
+        const double doubleN1 = double(N1);
+        if (doubleN1 == 0)
+        {
+            throw DivisionByZero();
+        }
         result.type = DOUBLE_TYPE;
-        result.double_num = double(*this) / double(N1);
+        std::feclearexcept(FE_OVERFLOW);
+        result.double_num = double(*this) / doubleN1;
+        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+        {
+            throw Overflow();
+        }
     }
     
     return result;
