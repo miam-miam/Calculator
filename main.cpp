@@ -9,10 +9,9 @@ int main()
     std::cout << std::setprecision(14);
     std::cout << "Hello, Calculator!" << std::endl;
     
-    std::cout << Number(binomialSeries(Fraction(26,1,5), 9)) << std::endl;
-    std::cout << Number(binomialSeries(Fraction(5,9,4), 2)) << std::endl;
-    std::cout << Number(binomialSeries(Fraction(5,9,4), 1)) << std::endl;
-    std::cout << Number(binomialSeries(Fraction(1,1,2), 2)) << std::endl;
+    auto base = Number(1,1,8);
+    auto exp = Number(0,1,2);
+    std::cout << powNum(base, exp) << std::endl;
     
     while (true)
     {

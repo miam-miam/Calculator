@@ -88,8 +88,8 @@ Fraction binomialSeries(Fraction FractionBase, SafeInt<int64_t> Exponent)
 Number powNum(Number Base, Number Exponent)
 {
     Number result = Number();
-//    try
-//    {
+    try
+    {
         if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::INTEGER_TYPE)
         {
             if (Exponent.integer < 0)
@@ -103,33 +103,49 @@ Number powNum(Number Base, Number Exponent)
         }
         else if (Base.type == Number::FRACTION_TYPE && Exponent.type == Number::INTEGER_TYPE)
         {
-            if (Exponent.integer < 0)
-            {
-                result.fraction.denominator = Base.fraction.integer * Base.fraction.denominator + Base.fraction.numerator;
-                result.fraction.numerator = Base.fraction.denominator;
-                result.fraction.normalise();
-                Exponent.integer *= -1;
-            }
             try
             {
-                result.fraction.numerator =
-                    powSI(Base.fraction.numerator + Base.fraction.integer * Base.fraction.denominator, Exponent.integer);
-                result.fraction.denominator = powSI(Base.fraction.denominator, Exponent.integer);
+                if (Exponent.integer < 0)
+                {
+                    result.fraction.denominator = powSI(Base.fraction.numerator + Base.fraction.integer * Base.fraction.denominator, -Exponent.integer);
+                    result.fraction.numerator = powSI(Base.fraction.denominator, -Exponent.integer);
+                }
+                else
+                {
+                    result.fraction.numerator =
+                        powSI(Base.fraction.numerator + Base.fraction.integer * Base.fraction.denominator,
+                              Exponent.integer);
+                    result.fraction.denominator = powSI(Base.fraction.denominator, Exponent.integer);
+                }
                 result.fraction.normalise();
             }
             catch (const SafeIntException &e)
             {
-                result.fraction = binomialSeries(Base.fraction, Exponent.integer);
+                if (Exponent.integer < 0)
+                {
+                    result.fraction = binomialSeries(Fraction(Base.fraction.denominator, Base.fraction.numerator + Base.fraction.denominator * Base.fraction.integer), -Exponent.integer);
+                }
+                else
+                {
+                    result.fraction = binomialSeries(Base.fraction, Exponent.integer);
+                }
+                
+            }
+            
+            if (result.fraction.numerator == 0)
+            {
+                result.integer = result.fraction.integer;
+                result.type = Number::INTEGER_TYPE;
+            }
+            else
+            {
+                result.type = Number::FRACTION_TYPE;
             }
         }
         else if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::FRACTION_TYPE && Exponent.fraction.integer > 0)
         {
             SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
             
-            if (simpleExponent.numerator < 0)
-            {
-                //TODO make it into a fraction
-            }
             if (simpleExponent.numerator != 1)
             {
                 result.power.base = powSI(Base.integer, simpleExponent.numerator);
@@ -164,6 +180,7 @@ Number powNum(Number Base, Number Exponent)
             }
             if (simpleExponent.numerator != 1)
             {
+                SafeInt<int64_t> finalNumerator = 1;
                 try
                 {
                     temp.numerator =
@@ -173,17 +190,39 @@ Number powNum(Number Base, Number Exponent)
                 }
                 catch (const SafeIntException &e)
                 {
-                    temp = SimpleFraction(binomialSeries(Base.fraction, simpleExponent.numerator));
+                    try
+                    {
+                        temp = SimpleFraction(binomialSeries(Base.fraction, simpleExponent.numerator));
+                    }
+                    catch (const SafeIntException &e)
+                    {
+                        finalNumerator = simpleExponent.numerator;
+                    }
                 }
-                simpleExponent.numerator = 1;
+                simpleExponent.numerator = finalNumerator;
             }
             else
             {
                 temp = SimpleFraction(Base.fraction);
             }
-            
+            // TODO implement if numerator of simpleExponent is not 1
+            SafeInt<int64_t> denominator = temp.denominator;
             // Careful base is passed by ref
-            result.power.multiplicand = Fraction(factorise(temp.numerator, simpleExponent.denominator), factorise(temp.denominator, simpleExponent.denominator));
+            result.power.multiplicand = Fraction(factorise(temp.numerator, simpleExponent.denominator) * factorise(temp.denominator, simpleExponent.denominator), denominator);
+            if (temp.numerator == 1 && temp.denominator == 1 && simpleExponent.denominator == 1)
+            {
+                if (result.power.multiplicand.numerator == 0)
+                {
+                    result.integer = result.power.multiplicand.integer;
+                    result.type = Number::INTEGER_TYPE;
+                }
+                else
+                {
+                    result.fraction = result.power.multiplicand;
+                    result.type = Number::FRACTION_TYPE;
+                }
+            }
+            result.power.base = temp.numerator * temp.denominator;
             result.power.exponent = simpleExponent;
             result.type = Number::POWER_TYPE;
         }
@@ -197,17 +236,17 @@ Number powNum(Number Base, Number Exponent)
                 throw Overflow();
             }
         }
-//    }
-//    catch (const SafeIntException& err)
-//    {
-//        result.type = Number::DOUBLE_TYPE;
-//        std::feclearexcept(FE_OVERFLOW);
-//        result.double_num = double(Base) + double(Exponent);
-//        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-//        {
-//            throw Overflow();
-//        }
-//    }
+    }
+    catch (const SafeIntException& err)
+    {
+        result.type = Number::DOUBLE_TYPE;
+        std::feclearexcept(FE_OVERFLOW);
+        result.double_num = pow(double(Base), double(Exponent));
+        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+        {
+            throw Overflow();
+        }
+    }
     return result;
 }
 

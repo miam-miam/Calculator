@@ -7,19 +7,20 @@
 long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
 {
     long long outsideRoot = 1;
-    const long long top = pow(InsideRoot, 1/double(Power));
+    long long top = pow(InsideRoot, 1/double(Power));
     long long div = 2;
+    long long divToPower;
     {
         int i = 0;
-        long long divToPower;
         // Check small primes
-        while (SPrimes[i] != 0 && div <= top)
+        while (SPrimes[i] != 0 && SPrimes[i] <= top)
         {
             div = SPrimes[i];
-            if ((InsideRoot & ((divToPower = powSI(div, Power)))) == 0)
+            if ((InsideRoot % ((divToPower = powSI(div, Power)))) == 0)
             {
                 InsideRoot = InsideRoot / divToPower;
                 outsideRoot = outsideRoot * div;
+                top = pow(InsideRoot, 1/double(Power));
             }
             else
             {
@@ -27,18 +28,19 @@ long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
             }
         }
         // Start the Wheel that skips useless factors
-        div = SPrimes[i - 1];
+        div = 601;
     }
     while (div <= top)
     {
         for (long long i = 0; Wheel[i] != 0; i++)
         {
-            while((InsideRoot & (div * div)) == 0)
-            {
-                InsideRoot = InsideRoot / (div * div);
-                outsideRoot = outsideRoot * div;
-            }
             div += Wheel[i];
+            while((InsideRoot % (divToPower = powSI(div, Power))) == 0)
+            {
+                InsideRoot = InsideRoot / divToPower;
+                outsideRoot = outsideRoot * div;
+                top = pow(InsideRoot, 1/double(Power));
+            }
         }
     }
     return outsideRoot;
