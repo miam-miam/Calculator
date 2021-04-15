@@ -97,6 +97,12 @@ Number::Number(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int
 {
     type = FRACTION_TYPE;
     fraction = {GivenInt, GivenNum, GivenDen};
+    fraction.normalise();
+    if (fraction.numerator == 0)
+    {
+        integer = fraction.integer;
+        type = INTEGER_TYPE;
+    }
 }
 
 Number::Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
@@ -108,7 +114,6 @@ Number::Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
         integer = fraction.integer;
         type = INTEGER_TYPE;
     }
-    
 }
 
 Number::Number(SafeInt<int64_t> GivenInt)

@@ -14,7 +14,7 @@ long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
         return outsideRoot;
     }
     long long top = pow(InsideRoot, 1/double(Power));
-    long long div = 2;
+    long long div;
     long long divToPower;
     {
         int i = 0;

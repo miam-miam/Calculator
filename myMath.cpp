@@ -46,7 +46,7 @@ int64_t tenPowll(unsigned long long Exp)
 
 SafeInt<int64_t> powSI(int64_t Base, int64_t Exponent)
 {
-    if (Exponent * ceilLog2(Base) > MAX_LONG_LONG_LOG_2)
+    if (Exponent * ceilLog2(llabs(Base)) > MAX_LONG_LONG_LOG_2)
     {
         throw SafeIntException();
     }
@@ -92,13 +92,23 @@ Number powNum(Number Base, Number Exponent)
     {
         if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::INTEGER_TYPE)
         {
-            if (Exponent.integer < 0)
+            try
             {
-                result = Number(0, 1, powSI(Base.integer, -Exponent.integer));
+                if (Exponent.integer < 0)
+                {
+                    result = Number(0, 1, powSI(Base.integer, -Exponent.integer));
+                }
+                else
+                {
+                    result = Number(powSI(Base.integer, Exponent.integer));
+                }
             }
-            else
+            catch (const SafeIntException &e)
             {
-                result = Number(powSI(Base.integer, Exponent.integer));
+                result.type = Number::POWER_TYPE;
+                result.power.multiplicand = Fraction(1, 0,1);
+                result.power.base = SimpleFraction(Base.integer, 1);
+                result.power.exponent = SimpleFraction(Exponent.integer, 1);
             }
         }
         else if (Base.type == Number::FRACTION_TYPE && Exponent.type == Number::INTEGER_TYPE)
@@ -121,25 +131,35 @@ Number powNum(Number Base, Number Exponent)
             }
             catch (const SafeIntException &e)
             {
-                if (Exponent.integer < 0)
+                try
                 {
-                    result.fraction = binomialSeries(Fraction(Base.fraction.denominator, Base.fraction.numerator + Base.fraction.denominator * Base.fraction.integer), -Exponent.integer);
+                    if (Exponent.integer < 0)
+                    {
+                        result.fraction = binomialSeries(Fraction(Base.fraction.denominator,
+                                                                  Base.fraction.numerator + Base.fraction.denominator
+                                                                      * Base.fraction.integer), -Exponent.integer);
+                    }
+                    else
+                    {
+                        result.fraction = binomialSeries(Base.fraction, Exponent.integer);
+                    }
+                    if (result.fraction.numerator == 0)
+                    {
+                        result.integer = result.fraction.integer;
+                        result.type = Number::INTEGER_TYPE;
+                    }
+                    else
+                    {
+                        result.type = Number::FRACTION_TYPE;
+                    }
                 }
-                else
+                catch (const SafeIntException &e)
                 {
-                    result.fraction = binomialSeries(Base.fraction, Exponent.integer);
+                    result.type = Number::POWER_TYPE;
+                    result.power.multiplicand = Fraction(1, 0,1);
+                    result.power.base = SimpleFraction(Base.fraction);
+                    result.power.exponent = SimpleFraction(Exponent.integer, 1);
                 }
-                
-            }
-            
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = Number::INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = Number::FRACTION_TYPE;
             }
         }
         else if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::FRACTION_TYPE && Exponent.fraction.integer > 0)
@@ -147,6 +167,7 @@ Number powNum(Number Base, Number Exponent)
             SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
             result.power.base = SimpleFraction(Base.integer, 1);
             result.type = Number::POWER_TYPE;
+            if (Exponent.fraction.denominator == 1) {assert(0);} // Fraction should not be an integer
             try
             {
                 if (simpleExponent.numerator != 1)
@@ -160,12 +181,13 @@ Number powNum(Number Base, Number Exponent)
                 }
                 
                 // Careful base is passed by ref
-                result.power.multiplicand = Fraction(factorise(result.power.base.numerator, Exponent.fraction.denominator), 0, 1);
+                result.power.multiplicand = Fraction(powSI(factorise(result.power.base.numerator, simpleExponent.denominator), simpleExponent.numerator), 0, 1);
                 result.power.exponent = simpleExponent;
             }
             catch (const SafeIntException &e)
             {
                 result.power.multiplicand = Fraction(1,0,1);
+                result.power.base.numerator = Base.integer;
                 result.power.exponent = simpleExponent;
             }
         }
