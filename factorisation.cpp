@@ -7,6 +7,12 @@
 long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
 {
     long long outsideRoot = 1;
+    if (Power == 1)
+    {
+        outsideRoot = InsideRoot;
+        InsideRoot = 1;
+        return outsideRoot;
+    }
     long long top = pow(InsideRoot, 1/double(Power));
     long long div = 2;
     long long divToPower;

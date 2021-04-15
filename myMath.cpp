@@ -145,25 +145,36 @@ Number powNum(Number Base, Number Exponent)
         else if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::FRACTION_TYPE && Exponent.fraction.integer > 0)
         {
             SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
-            
-            if (simpleExponent.numerator != 1)
-            {
-                result.power.base = powSI(Base.integer, simpleExponent.numerator);
-                simpleExponent.numerator = 1;
-            }
-            else
-            {
-                result.power.base = Base.integer;
-            }
-            
-            // Careful base is passed by ref
-            result.power.multiplicand = Fraction(factorise(result.power.base, Exponent.integer), 0, 1);
-            result.power.exponent = simpleExponent;
+            result.power.base = SimpleFraction(Base.integer, 1);
             result.type = Number::POWER_TYPE;
+            try
+            {
+                if (simpleExponent.numerator != 1)
+                {
+                    try
+                    {
+                        result.power.base.numerator = powSI(Base.integer, simpleExponent.numerator);
+                        simpleExponent.numerator = 1;
+                    }
+                    catch (const SafeIntException &e) {}
+                }
+                
+                // Careful base is passed by ref
+                result.power.multiplicand = Fraction(factorise(result.power.base.numerator, Exponent.fraction.denominator), 0, 1);
+                result.power.exponent = simpleExponent;
+            }
+            catch (const SafeIntException &e)
+            {
+                result.power.multiplicand = Fraction(1,0,1);
+                result.power.exponent = simpleExponent;
+            }
         }
         else if ((Base.type == Number::FRACTION_TYPE || Exponent.fraction.integer <= 0) && Exponent.type == Number::FRACTION_TYPE)
         {
             SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
+            SimpleFraction newBase = SimpleFraction();
+            result.type = Number::POWER_TYPE;
+            
             if (Base.type == Number::INTEGER_TYPE)
             {
                 // Exponent must have been negative and so will need to change Base into a fraction
@@ -171,9 +182,7 @@ Number powNum(Number Base, Number Exponent)
                 Base.type = Number::FRACTION_TYPE;
                 simpleExponent.numerator *= -1;
             }
-            SimpleFraction newBase = SimpleFraction();
-    
-            if (simpleExponent.numerator < 0)
+            else if (simpleExponent.numerator < 0)
             {
                 Base.fraction = Fraction(Base.fraction.denominator, Base.fraction.numerator + Base.fraction.denominator * Base.fraction.integer);
                 simpleExponent.numerator *= -1;
@@ -182,53 +191,64 @@ Number powNum(Number Base, Number Exponent)
             }
             if (simpleExponent.numerator != 1)
             {
-                SafeInt<int64_t> finalNumerator = 1;
                 try
                 {
                     newBase.numerator =
                         powSI(Base.fraction.numerator + Base.fraction.integer * Base.fraction.denominator, simpleExponent.numerator);
                     newBase.denominator = powSI(Base.fraction.denominator, simpleExponent.numerator);
                     newBase.normalise();
+                    simpleExponent.numerator = 1;
                 }
                 catch (const SafeIntException &e)
                 {
                     try
                     {
                         newBase = SimpleFraction(binomialSeries(Base.fraction, simpleExponent.numerator));
+                        simpleExponent.numerator = 1;
                     }
-                    catch (const SafeIntException &e)
+                    catch (const SafeIntException &e)   // Cannot simplify so must return as is
                     {
-                        finalNumerator = simpleExponent.numerator;
-                        newBase = SimpleFraction(Base.fraction);
+                        result.power.multiplicand = Fraction(1,0,1);
+                        result.power.base = SimpleFraction(Base.fraction);
+                        result.power.exponent = simpleExponent;
+                        return result;
                     }
                 }
-                simpleExponent.numerator = finalNumerator;
-                simpleExponent.normalise();
             }
             else
             {
                 newBase = SimpleFraction(Base.fraction);
             }
             // TODO implement if numerator of simpleExponent is not 1
-            SafeInt<int64_t> denominator = newBase.denominator;
-            // Careful base is passed by ref
-            result.power.multiplicand = Fraction(factorise(newBase.numerator, simpleExponent.denominator) * powSI(factorise(newBase.denominator, simpleExponent.denominator), simpleExponent.denominator - 1), denominator);
-            if (newBase.numerator == 1 && newBase.denominator == 1 && simpleExponent.denominator == 1)
             {
+                SafeInt<int64_t> denominator = newBase.denominator;
+                // Careful base is passed by ref
+                result.power.multiplicand = Fraction(factorise(newBase.numerator, simpleExponent.denominator) * powSI(factorise(newBase.denominator, simpleExponent.denominator), simpleExponent.denominator - 1), denominator);
+            }
+            
+            if (_abs64(newBase.numerator) == 1 && newBase.denominator == 1 && !(simpleExponent.denominator % 2 == 0 && newBase.numerator == -1)) // Can simplify to simpler types but must remove complex numbers
+            {
+                if (newBase.numerator == -1 && simpleExponent.numerator % 2 == 1)
+                {
+                    result.power.multiplicand.integer *= -1;
+                    result.power.multiplicand.numerator *= -1;
+                }
                 if (result.power.multiplicand.numerator == 0)
                 {
                     result.integer = result.power.multiplicand.integer;
                     result.type = Number::INTEGER_TYPE;
+                    return result;
                 }
                 else
                 {
                     result.fraction = result.power.multiplicand;
                     result.type = Number::FRACTION_TYPE;
+                    return result;
                 }
             }
-            result.power.base = newBase.numerator * powSI(newBase.denominator, simpleExponent.denominator - 1);
+            
+            result.power.base = SimpleFraction(newBase.numerator * powSI(newBase.denominator, simpleExponent.denominator - 1), 1);
             result.power.exponent = simpleExponent;
-            result.type = Number::POWER_TYPE;
         }
         else if (Base.type == Number::DOUBLE_TYPE || Exponent.type == Number::DOUBLE_TYPE)
         {

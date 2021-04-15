@@ -84,7 +84,7 @@ std::ostream &operator<<(std::ostream &Strm, const Number &N1)
     }
     else if (N1.type == Number::POWER_TYPE)
     {
-        Strm << "(" << int64_t(N1.power.multiplicand.integer) << "+" << int64_t(N1.power.multiplicand.numerator) << "/" << int64_t(N1.power.multiplicand.denominator) << ")*" << int64_t(N1.power.base) << "^(" << int64_t(N1.power.exponent.numerator) << "/" << int64_t(N1.power.exponent.denominator) << ")";
+        Strm << "(" << int64_t(N1.power.multiplicand.integer) << "+" << int64_t(N1.power.multiplicand.numerator) << "/" << int64_t(N1.power.multiplicand.denominator) << ")*(" << int64_t(N1.power.base.numerator) << "/" << int64_t(N1.power.base.denominator) <<  ")^(" << int64_t(N1.power.exponent.numerator) << "/" << int64_t(N1.power.exponent.denominator) << ")";
     }
     else
     {
@@ -537,13 +537,15 @@ void SimpleFraction::normalise()
     {
         throw DivisionByZero();
     }
-    
     if (denominator < 0)
     {
         numerator *= -1;
         denominator *= -1;
     }
-    
+    if (denominator == 1)
+    {
+        return;
+    }
     if (numerator == 0)
     {
         denominator = 1;
@@ -573,13 +575,20 @@ Power::operator double() const
 Power::Power()
 {
     multiplicand = Fraction(1,0,1);
-    base = 1;
+    base = SimpleFraction(1,1);
     exponent = SimpleFraction(1,1);
+}
+
+Power::Power(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent)
+{
+    multiplicand = GivenMultiplicand;
+    base = GivenBase;
+    exponent = GivenExponent;
 }
 
 Power::Power(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent)
 {
     multiplicand = GivenMultiplicand;
-    base = GivenBase;
+    base = SimpleFraction(GivenBase, 1);
     exponent = GivenExponent;
 }

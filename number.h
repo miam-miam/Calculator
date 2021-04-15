@@ -57,8 +57,9 @@ struct Fraction
 struct Power
 {
     Fraction multiplicand;
-    SafeInt<int64_t> base;
+    SimpleFraction base;
     SimpleFraction exponent;
+    Power(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent);
     Power(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent);
     Power();
     

@@ -14,6 +14,11 @@ class DivisionByZero: public CalculatorException
     [[nodiscard]] char const * what() const noexcept override { return "Division by zero"; }
 };
 
+class ComplexNumber: public CalculatorException
+{
+    [[nodiscard]] char const * what() const noexcept override { return "Complex numbers not implemented"; }
+};
+
 class UnmatchedBracket: public CalculatorException
 {
     [[nodiscard]] char const * what() const noexcept override { return "Unmatched bracket"; }
