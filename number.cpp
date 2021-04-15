@@ -82,6 +82,10 @@ std::ostream &operator<<(std::ostream &Strm, const Number &N1)
     {
         Strm << N1.double_num;
     }
+    else if (N1.type == Number::POWER_TYPE)
+    {
+        Strm << "(" << int64_t(N1.power.multiplicand.integer) << "+" << int64_t(N1.power.multiplicand.numerator) << "/" << int64_t(N1.power.multiplicand.denominator) << ")*" << int64_t(N1.power.base) << "^(" << int64_t(N1.power.exponent.numerator) << "/" << int64_t(N1.power.exponent.denominator) << ")";
+    }
     else
     {
         assert(0);
@@ -524,6 +528,7 @@ SimpleFraction::SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> Given
 {
     numerator = GivenNum;
     denominator = GivenDen;
+    normalise();
 }
 
 void SimpleFraction::normalise()

@@ -4,9 +4,9 @@
 
 struct SimpleFraction
 {
-    SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // does not normalise
+    SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
     
-    SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // does not normalise
+    SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
     
     SimpleFraction()
     {

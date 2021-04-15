@@ -4,13 +4,12 @@
 
 int main()
 {
-    
     // Setting the precision to 13 decimal places
     std::cout << std::setprecision(14);
     std::cout << "Hello, Calculator!" << std::endl;
     
-    auto base = Number(1,1,8);
-    auto exp = Number(0,1,2);
+    auto base = Number(10000000,1,8);
+    auto exp = Number(49,0,1);
     std::cout << powNum(base, exp) << std::endl;
     
     while (true)

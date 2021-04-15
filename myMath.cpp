@@ -171,45 +171,49 @@ Number powNum(Number Base, Number Exponent)
                 Base.type = Number::FRACTION_TYPE;
                 simpleExponent.numerator *= -1;
             }
-            SimpleFraction temp = SimpleFraction();
+            SimpleFraction newBase = SimpleFraction();
     
             if (simpleExponent.numerator < 0)
             {
                 Base.fraction = Fraction(Base.fraction.denominator, Base.fraction.numerator + Base.fraction.denominator * Base.fraction.integer);
                 simpleExponent.numerator *= -1;
+                Exponent.fraction.numerator *= -1;
+                Exponent.fraction.integer *= -1;
             }
             if (simpleExponent.numerator != 1)
             {
                 SafeInt<int64_t> finalNumerator = 1;
                 try
                 {
-                    temp.numerator =
+                    newBase.numerator =
                         powSI(Base.fraction.numerator + Base.fraction.integer * Base.fraction.denominator, simpleExponent.numerator);
-                    temp.denominator = powSI(Base.fraction.denominator, simpleExponent.numerator);
-                    temp.normalise();
+                    newBase.denominator = powSI(Base.fraction.denominator, simpleExponent.numerator);
+                    newBase.normalise();
                 }
                 catch (const SafeIntException &e)
                 {
                     try
                     {
-                        temp = SimpleFraction(binomialSeries(Base.fraction, simpleExponent.numerator));
+                        newBase = SimpleFraction(binomialSeries(Base.fraction, simpleExponent.numerator));
                     }
                     catch (const SafeIntException &e)
                     {
                         finalNumerator = simpleExponent.numerator;
+                        newBase = SimpleFraction(Base.fraction);
                     }
                 }
                 simpleExponent.numerator = finalNumerator;
+                simpleExponent.normalise();
             }
             else
             {
-                temp = SimpleFraction(Base.fraction);
+                newBase = SimpleFraction(Base.fraction);
             }
             // TODO implement if numerator of simpleExponent is not 1
-            SafeInt<int64_t> denominator = temp.denominator;
+            SafeInt<int64_t> denominator = newBase.denominator;
             // Careful base is passed by ref
-            result.power.multiplicand = Fraction(factorise(temp.numerator, simpleExponent.denominator) * factorise(temp.denominator, simpleExponent.denominator), denominator);
-            if (temp.numerator == 1 && temp.denominator == 1 && simpleExponent.denominator == 1)
+            result.power.multiplicand = Fraction(factorise(newBase.numerator, simpleExponent.denominator) * powSI(factorise(newBase.denominator, simpleExponent.denominator), simpleExponent.denominator - 1), denominator);
+            if (newBase.numerator == 1 && newBase.denominator == 1 && simpleExponent.denominator == 1)
             {
                 if (result.power.multiplicand.numerator == 0)
                 {
@@ -222,7 +226,7 @@ Number powNum(Number Base, Number Exponent)
                     result.type = Number::FRACTION_TYPE;
                 }
             }
-            result.power.base = temp.numerator * temp.denominator;
+            result.power.base = newBase.numerator * powSI(newBase.denominator, simpleExponent.denominator - 1);
             result.power.exponent = simpleExponent;
             result.type = Number::POWER_TYPE;
         }
