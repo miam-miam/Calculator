@@ -8,8 +8,8 @@ int main()
     std::cout << std::setprecision(14);
     std::cout << "Hello, Calculator!" << std::endl;
     
-    auto base = Number(-10,9);
-    auto exp = Number(2,5);
+    auto base = Number(-10, 9);
+    auto exp = Number(2, 5);
     std::cout << powNum(base, exp) << std::endl;
     
     while (true)

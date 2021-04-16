@@ -22,7 +22,7 @@ struct SimpleFraction
     explicit operator double() const
     { return double(numerator) / double(denominator); }
     
-    bool operator==(const SimpleFraction& Other) const
+    bool operator==(const SimpleFraction &Other) const
     { return numerator == Other.numerator && denominator == Other.denominator; }
     
     SimpleFraction operator+(SimpleFraction) const;
@@ -58,13 +58,15 @@ struct Fraction
     { return double(integer) + double(numerator) / double(denominator); }
     
     explicit operator SimpleFraction() const
-    { return  SimpleFraction(numerator + integer * denominator, denominator); }
+    { return SimpleFraction(numerator + integer * denominator, denominator); }
     
     Fraction operator+(Fraction) const;
     
     Fraction operator-(Fraction) const;
     
     Fraction operator*(Fraction) const;
+    
+    Fraction operator*(SafeInt<int64_t>) const;
     
     void normalise();
 };
@@ -80,6 +82,5 @@ struct Power
     
     explicit operator double() const;
 };
-
 
 #endif //CALCULATOR__DATATYPES_H

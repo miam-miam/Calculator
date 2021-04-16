@@ -1,7 +1,6 @@
 #include "number.h"
 #include "myMath.h"
 
-
 Number::Number()
 {
     type = INTEGER_TYPE;
@@ -33,8 +32,16 @@ Number::Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)
 
 Number::Number(Fraction GivenFraction)
 {
-    type = FRACTION_TYPE;
     fraction = GivenFraction;
+    if (fraction.numerator == 0)
+    {
+        integer = fraction.integer;
+        type = INTEGER_TYPE;
+    }
+    else
+    {
+        type = FRACTION_TYPE;
+    }
 }
 
 Number::Number(SafeInt<int64_t> GivenInt)
@@ -68,7 +75,7 @@ Number::Number(const std::string_view &Number, int Offset)  // Assumes there is 
                 fraction.numerator = -fraction.numerator;
             }
             fraction.denominator = tenPowll(Number.length() - (Offset + 1));
-        
+            
             fraction.normalise();
         }
         else
@@ -97,6 +104,12 @@ Number::Number(const std::string_view &Number, int Offset)  // Assumes there is 
             }
         }
     }
+}
+
+Number::Number(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent)
+{
+    type = POWER_TYPE;
+    power = Power(GivenMultiplicand, GivenBase, GivenExponent);
 }
 
 Number::Number(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent)
@@ -128,7 +141,7 @@ Number::operator double() const
     }
 }
 
-Number& Number::operator=(const Number& Other)
+Number &Number::operator=(const Number &Other)
 {
     type = Other.type;
     switch (type)
@@ -159,320 +172,219 @@ Number& Number::operator=(const Number& Other)
 
 Number Number::operator+(const Number N1) const
 {
-    Number result;
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(integer + N1.integer);
+            return Number(integer + N1.integer);
         }
-        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
+            return Number(fraction.integer + N1.integer, fraction.numerator, fraction.denominator);
         }
-        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result = Number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
+            return Number(integer + N1.fraction.integer, N1.fraction.numerator, N1.fraction.denominator);
         }
-        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction = fraction + N1.fraction;
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = FRACTION_TYPE;
-            }
+            return Number(fraction + N1.fraction);
         }
-        else if (type == POWER_TYPE && N1.type == POWER_TYPE && power.exponent == N1.power.exponent && power.base == N1.power.base)
+        if (type == POWER_TYPE && N1.type == POWER_TYPE && power.exponent == N1.power.exponent
+            && power.base == N1.power.base)
         {
-            result.type = POWER_TYPE;
-            result.power.base = power.base;
-            result.power.exponent = power.exponent;
-            result.power.multiplicand = power.multiplicand + N1.power.multiplicand;
-        }
-        else
-        {
-            result.type = DOUBLE_TYPE;
-            std::feclearexcept(FE_OVERFLOW);
-            result.double_num = double(*this) + double(N1);
-            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-            {
-                throw Overflow();
-            }
+            return Number(power.multiplicand + N1.power.multiplicand, power.base, power.exponent);
         }
     }
-    catch (const SafeIntException& err)
+    catch (const SafeIntException &err)
     {
-        result.type = DOUBLE_TYPE;
-        std::feclearexcept(FE_OVERFLOW);
-        result.double_num = double(*this) + double(N1);
-        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-        {
-            throw Overflow();
-        }
     }
     
+    Number result;
+    result.type = DOUBLE_TYPE;
+    std::feclearexcept(FE_OVERFLOW);
+    result.double_num = double(*this) + double(N1);
+    if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+    {
+        throw Overflow();
+    }
     return result;
 }
 
 Number Number::operator-(const Number N1) const
 {
-    Number result;
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(integer - N1.integer);
+            return Number(integer - N1.integer);
         }
-        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
+            return Number(fraction.integer - N1.integer, fraction.numerator, fraction.denominator);
         }
-        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result = Number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
+            return Number(integer - N1.fraction.integer, -N1.fraction.numerator, N1.fraction.denominator);
         }
-        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction = fraction - N1.fraction;
-            
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = FRACTION_TYPE;
-            }
+            return Number(fraction - N1.fraction);
         }
-        else if (type == POWER_TYPE && N1.type == POWER_TYPE && power.exponent == N1.power.exponent && power.base == N1.power.base)
+        if (type == POWER_TYPE && N1.type == POWER_TYPE && power.exponent == N1.power.exponent
+            && power.base == N1.power.base)
         {
-            result.type = POWER_TYPE;
-            result.power.base = power.base;
-            result.power.exponent = power.exponent;
-            result.power.multiplicand = power.multiplicand - N1.power.multiplicand;
-        }
-        else
-        {
-            result.type = DOUBLE_TYPE;
-            std::feclearexcept(FE_OVERFLOW);
-            result.double_num = double(*this) - double(N1);
-            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-            {
-                throw Overflow();
-            }
+            return Number(power.multiplicand - N1.power.multiplicand, power.base, power.exponent);
         }
     }
-    catch (const SafeIntException& err)
+    catch (const SafeIntException &err)
     {
-        result.type = DOUBLE_TYPE;
-        std::feclearexcept(FE_OVERFLOW);
-        result.double_num = double(*this) - double(N1);
-        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-        {
-            throw Overflow();
-        }
+    }
+    Number result;
+    result.type = DOUBLE_TYPE;
+    std::feclearexcept(FE_OVERFLOW);
+    result.double_num = double(*this) - double(N1);
+    if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+    {
+        throw Overflow();
     }
     return result;
 }
 
 Number Number::operator*(const Number N1) const
 {
-    Number result;
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(integer * N1.integer);
+            return Number(integer * N1.integer);
         }
-        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.fraction.integer = fraction.integer * N1.integer;
-            result.fraction.numerator = N1.integer * fraction.numerator;
-            result.fraction.denominator = fraction.denominator;
-        
-            result.fraction.normalise();
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = FRACTION_TYPE;
-            }
+            return Number(fraction * N1.integer);
         }
-        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction.integer = N1.fraction.integer * integer;
-            result.fraction.numerator = integer * N1.fraction.numerator;
-            result.fraction.denominator = N1.fraction.denominator;
-        
-            result.fraction.normalise();
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = FRACTION_TYPE;
-            }
+            return Number(fraction * N1.integer);
         }
-        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction = N1.fraction * fraction;
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
-            else
-            {
-                result.type = FRACTION_TYPE;
-            }
+            return Number(N1.fraction * fraction);
         }
-        else if (type == POWER_TYPE && N1.type == POWER_TYPE)
+        if (type == POWER_TYPE && N1.type == INTEGER_TYPE)
         {
-            if(power.base == N1.power.base)
+            return Number(power.multiplicand * N1.integer, N1.power.base, N1.power.exponent);
+        }
+        if (type == INTEGER_TYPE && N1.type == POWER_TYPE)
+        {
+            return Number(N1.power.multiplicand * integer, N1.power.base, N1.power.exponent);
+        }
+        if (type == POWER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            return Number(power.multiplicand * N1.fraction, power.base, power.exponent);
+        }
+        if (type == FRACTION_TYPE && N1.type == POWER_TYPE)
+        {
+            return Number(N1.power.multiplicand * fraction, N1.power.base, N1.power.exponent);
+        }
+        if (type == POWER_TYPE && N1.type == POWER_TYPE)
+        {
+            if (power.base == N1.power.base)
             {
-                result.type = POWER_TYPE;
-                result.power.multiplicand = power.multiplicand * N1.power.multiplicand;
-                result.power.base = power.base;
-                result.power.exponent = power.exponent + N1.power.exponent;
+                return Number(power.multiplicand * N1.power.multiplicand,
+                              power.base,
+                              power.exponent + N1.power.exponent);
             }
-            else if(power.exponent == N1.power.exponent)
+            else if (power.exponent == N1.power.exponent)
             {
-                result.type = POWER_TYPE;
-                result.power.multiplicand = power.multiplicand * N1.power.multiplicand;
-                result.power.base = power.base * N1.power.base;
-                result.power.exponent = power.exponent;
-            }
-        }
-        else if (type == POWER_TYPE)
-        {
-        
-        }
-        else if (N1.type == POWER_TYPE)
-        {
-    
-        }
-        else
-        {
-            result.type = DOUBLE_TYPE;
-            std::feclearexcept(FE_OVERFLOW);
-            result.double_num = double(*this) * double(N1);
-            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-            {
-                throw Overflow();
+                return Number(power.multiplicand * N1.power.multiplicand, power.base * N1.power.base, power.exponent);
             }
         }
     }
-    catch (const SafeIntException& err)
+    catch (const SafeIntException &err)
     {
-        result.type = DOUBLE_TYPE;
-        std::feclearexcept(FE_OVERFLOW);
-        result.double_num = double(*this) * double(N1);
-        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-        {
-            throw Overflow();
-        }
     }
-    
+    Number result;
+    result.type = DOUBLE_TYPE;
+    std::feclearexcept(FE_OVERFLOW);
+    result.double_num = double(*this) * double(N1);
+    if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+    {
+        throw Overflow();
+    }
     return result;
 }
 
 Number Number::operator/(const Number N1) const
 {
-    Number result = Number(0, 0, 1);
-    
+    if (checkIfZero(N1))
+    {
+        throw DivisionByZero();
+    }
     try
     {
         if (type == INTEGER_TYPE && N1.type == INTEGER_TYPE)
         {
-            result = Number(integer, N1.integer);
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
+            return Number(integer, N1.integer);
         }
-        else if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
+        if (type == FRACTION_TYPE && N1.type == INTEGER_TYPE)
         {
-            result.fraction.numerator = fraction.numerator + N1.integer * fraction.denominator;
-            result.fraction.denominator = N1.integer * fraction.denominator;
-        
-            result.fraction.normalise();
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
+            const auto numerator = fraction.numerator + N1.integer * fraction.denominator;
+            const auto denominator = N1.integer * fraction.denominator;
+            return Number(numerator, denominator);
         }
-        else if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
+        if (type == INTEGER_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction.numerator = integer * N1.fraction.denominator;
-            result.fraction.denominator = N1.fraction.numerator + integer * N1.fraction.denominator;
-        
-            result.fraction.normalise();
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
+            const auto numerator = integer * N1.fraction.denominator;
+            const auto denominator = N1.fraction.numerator + integer * N1.fraction.denominator;
+            return Number(numerator, denominator);
         }
-        else if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
+        if (type == FRACTION_TYPE && N1.type == FRACTION_TYPE)
         {
-            result.fraction.numerator = fraction.integer * fraction.denominator * N1.fraction.denominator
+            const auto numerator = fraction.integer * fraction.denominator * N1.fraction.denominator
                 + N1.fraction.denominator * fraction.numerator;
-            result.fraction.denominator = N1.fraction.denominator * fraction.denominator * N1.fraction.integer
+            const auto denominator = N1.fraction.denominator * fraction.denominator * N1.fraction.integer
                 + fraction.denominator * N1.fraction.numerator;
-        
-            result.fraction.normalise();
-            if (result.fraction.numerator == 0)
-            {
-                result.integer = result.fraction.integer;
-                result.type = INTEGER_TYPE;
-            }
+            return Number(numerator, denominator);
         }
-        else if (type == DOUBLE_TYPE || N1.type == DOUBLE_TYPE)
-        {
-            const auto doubleN1 = double(N1);
-            if (doubleN1 == 0)
-            {
-                throw DivisionByZero();
-            }
-            result.type = DOUBLE_TYPE;
-            std::feclearexcept(FE_OVERFLOW);
-            result.double_num = double(*this) / doubleN1;
-            if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-            {
-                throw Overflow();
-            }
-        }
+        //TODO power types
     }
-    catch (const SafeIntException& err)
+    catch (const SafeIntException &err)
     {
-        const auto doubleN1 = double(N1);
-        if (doubleN1 == 0)
-        {
-            throw DivisionByZero();
-        }
-        result.type = DOUBLE_TYPE;
-        std::feclearexcept(FE_OVERFLOW);
-        result.double_num = double(*this) / doubleN1;
-        if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
-        {
-            throw Overflow();
-        }
     }
     
+    Number result;
+    result.type = DOUBLE_TYPE;
+    std::feclearexcept(FE_OVERFLOW);
+    result.double_num = double(*this) / double(N1);
+    if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
+    {
+        throw Overflow();
+    }
     return result;
+}
+
+bool Number::checkIfZero(Number) const
+{
+    switch (type)
+    {
+        case INTEGER_TYPE:
+        {
+            return integer == 0;
+        }
+        case FRACTION_TYPE:
+        {
+            return fraction.integer == 0 && fraction.numerator == 0;
+        }
+        case DOUBLE_TYPE:
+        {
+            return double_num == 0;
+        }
+        case POWER_TYPE:
+        {
+            return power.multiplicand.integer == 0 && power.multiplicand.numerator == 0;
+        }
+    }
 }
 
 std::ostream &operator<<(std::ostream &Strm, const Number &N1)
@@ -487,7 +399,8 @@ std::ostream &operator<<(std::ostream &Strm, const Number &N1)
     }
     else if (N1.type == Number::FRACTION_TYPE)
     {
-        Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/" << int64_t(N1.fraction.denominator);
+        Strm << int64_t(N1.fraction.integer) << "+" << int64_t(N1.fraction.numerator) << "/"
+             << int64_t(N1.fraction.denominator);
     }
     else if (N1.type == Number::DOUBLE_TYPE)
     {
@@ -495,7 +408,10 @@ std::ostream &operator<<(std::ostream &Strm, const Number &N1)
     }
     else if (N1.type == Number::POWER_TYPE)
     {
-        Strm << "(" << int64_t(N1.power.multiplicand.integer) << "+" << int64_t(N1.power.multiplicand.numerator) << "/" << int64_t(N1.power.multiplicand.denominator) << ")*(" << int64_t(N1.power.base.numerator) << "/" << int64_t(N1.power.base.denominator) <<  ")^(" << int64_t(N1.power.exponent.numerator) << "/" << int64_t(N1.power.exponent.denominator) << ")";
+        Strm << "(" << int64_t(N1.power.multiplicand.integer) << "+" << int64_t(N1.power.multiplicand.numerator) << "/"
+             << int64_t(N1.power.multiplicand.denominator) << ")*(" << int64_t(N1.power.base.numerator) << "/"
+             << int64_t(N1.power.base.denominator) << ")^(" << int64_t(N1.power.exponent.numerator) << "/"
+             << int64_t(N1.power.exponent.denominator) << ")";
     }
     else
     {
@@ -503,5 +419,3 @@ std::ostream &operator<<(std::ostream &Strm, const Number &N1)
     }
     return Strm;
 }
-
-//TODO write a normalise for power

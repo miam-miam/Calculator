@@ -38,7 +38,7 @@ void Expression::tokenise(std::queue<Token> &InfixTokens, std::string_view &Stri
                     break;
                 }
             }
-            auto* tempNumber = new Number;
+            auto *tempNumber = new Number;
             if (space)
             {
                 std::string stringNumber = String.substr(i, j - i).data();
@@ -51,7 +51,7 @@ void Expression::tokenise(std::queue<Token> &InfixTokens, std::string_view &Stri
             }
             InfixTokens.emplace(tempNumber);
             i = j - 1;
-    
+            
         }
         else if (String[i] != ' ')
         {
@@ -137,10 +137,9 @@ void Expression::infixToPostfix(std::deque<Token> &PostfixTokens, std::queue<Tok
 
 Number Expression::evaluatePostfix(std::deque<Token> &PostfixTokens)
 {
-    //TODO do deep copy
-    std::vector<Number*> resultVec;
-    Number* x;
-    Number* y;
+    std::vector<Number *> resultVec;
+    Number *x;
+    Number *y;
     try
     {
         for (auto it = PostfixTokens.begin(); it != PostfixTokens.end(); ++it)
@@ -207,12 +206,12 @@ Number Expression::evaluatePostfix(std::deque<Token> &PostfixTokens)
     {
         for (auto it = PostfixTokens.begin(); it != PostfixTokens.end(); ++it)
         {
-            if (it -> type == NUMBER && it -> num != y && it -> num != x)
+            if (it->type == NUMBER && it->num != y && it->num != x)
             {
-                delete it -> num;
+                delete it->num;
             }
         }
-        for (auto & it : resultVec)
+        for (auto &it : resultVec)
         {
             delete it;
         }
@@ -271,7 +270,7 @@ Token::Token()
     type = NONE;
 }
 
-Token::Token(Number* N1)
+Token::Token(Number *N1)
 {
     num = N1;
     type = NUMBER;

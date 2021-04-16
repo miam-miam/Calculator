@@ -26,12 +26,13 @@ struct Number
     Number(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen);
     explicit Number(Fraction GivenFraction);
     explicit Number(SafeInt<int64_t> GivenInt);
-    explicit Number(const std::string_view &Number, int Offset=-2);
+    explicit Number(const std::string_view &Number, int Offset = -2);
+    Number(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent);
     Number(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFraction GivenExponent);
     
     explicit operator double() const;
     
-    Number& operator=(const Number& Other);
+    Number &operator=(const Number &Other);
     
     Number operator+(Number) const;
     
@@ -40,6 +41,9 @@ struct Number
     Number operator*(Number) const;
     
     Number operator/(Number) const;
+    
+    [[nodiscard]] bool checkIfZero(Number) const;
+    
 };
 
 std::ostream &operator<<(std::ostream &Strm, const Number &);

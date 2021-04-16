@@ -60,8 +60,6 @@ void SimpleFraction::normalise()
     }
 }
 
-
-
 Fraction::Fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)    // Not unused
 {
     integer = GivenInt;
@@ -101,8 +99,20 @@ Fraction Fraction::operator*(Fraction F1) const
 {
     Fraction result;
     result.integer = F1.integer * integer;
-    result.numerator = F1.numerator * numerator + F1.denominator * F1.integer * numerator + denominator * integer * F1.numerator;
+    result.numerator =
+        F1.numerator * numerator + F1.denominator * F1.integer * numerator + denominator * integer * F1.numerator;
     result.denominator = F1.denominator * denominator;
+    result.normalise();
+    
+    return result;
+}
+
+Fraction Fraction::operator*(SafeInt<int64_t> I1) const
+{
+    Fraction result;
+    result.integer = integer * I1;
+    result.numerator = I1 * numerator;
+    result.denominator = denominator;
     result.normalise();
     
     return result;
@@ -150,8 +160,6 @@ void Fraction::normalise()
     
 }
 
-
-
 Power::Power(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent)
 {
     multiplicand = GivenMultiplicand;
@@ -168,18 +176,20 @@ Power::Power(Fraction GivenMultiplicand, SafeInt<int64_t> GivenBase, SimpleFract
 
 Power::Power()
 {
-    multiplicand = Fraction(1,0,1);
-    base = SimpleFraction(1,1);
-    exponent = SimpleFraction(1,1);
+    multiplicand = Fraction(1, 0, 1);
+    base = SimpleFraction(1, 1);
+    exponent = SimpleFraction(1, 1);
 }
 
 Power::operator double() const
 {
     std::feclearexcept(FE_OVERFLOW);
-    const double result = pow(double (base) , double (exponent));
+    const double result = pow(double(base), double(exponent));
     if (std::fetestexcept(FE_OVERFLOW) & FE_OVERFLOW)
     {
         throw Overflow();
     }
     return result;
 }
+
+//TODO write a normalise for power

@@ -20,9 +20,9 @@ const int Precedence[] = {0, 0, 2, 2, 3, 3, 1, 0};
 
 struct Token
 {
-    Number* num;
+    Number *num;
     TokenType type;
-    explicit Token(Number* N1);
+    explicit Token(Number *N1);
     explicit Token(char C1);
     explicit Token(TokenType TokenType);
     Token();
