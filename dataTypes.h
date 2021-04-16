@@ -66,6 +66,8 @@ struct Fraction
     
     Fraction operator*(Fraction) const;
     
+    Fraction operator*(SafeInt<int64_t>) const;
+    
     void normalise();
 };
 

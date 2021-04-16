@@ -108,6 +108,16 @@ Fraction Fraction::operator*(Fraction F1) const
     return result;
 }
 
+Fraction Fraction::operator*(SafeInt<int64_t> I1) const
+{
+    Fraction result;
+    result.integer = integer * I1;
+    result.numerator = I1 * numerator;
+    result.denominator = denominator;
+    result.normalise();
+    
+    return result;
+}
 void Fraction::normalise()
 {
     if (denominator == 0)
