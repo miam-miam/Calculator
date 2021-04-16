@@ -1,11 +1,15 @@
 #ifndef CALCULATOR__DATATYPES_H
 #define CALCULATOR__DATATYPES_H
+#include <functional>
+
 
 struct SimpleFraction
 {
     SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
     
     SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
+    
+    explicit SimpleFraction(SafeInt<int64_t> GivenNum); // does not normalise
     
     SimpleFraction()
     {
@@ -30,6 +34,8 @@ struct SimpleFraction
     SimpleFraction operator-(SimpleFraction) const;
     
     SimpleFraction operator*(SimpleFraction) const;
+    
+    SimpleFraction operator-() const;
     
     void normalise();
     
@@ -69,6 +75,8 @@ struct Fraction
     Fraction operator*(Fraction) const;
     
     Fraction operator*(SafeInt<int64_t>) const;
+    
+    Fraction operator-() const;
     
     void normalise();
     

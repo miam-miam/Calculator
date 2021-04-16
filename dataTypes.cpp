@@ -15,6 +15,12 @@ SimpleFraction::SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> Given
     normalise();
 }
 
+SimpleFraction::SimpleFraction(SafeInt<int64_t> GivenNum)
+{
+    numerator = GivenNum;
+    denominator = 1;
+}
+
 SimpleFraction SimpleFraction::operator+(SimpleFraction S1) const
 {
     return SimpleFraction(numerator * S1.denominator + S1.numerator * denominator, denominator * S1.denominator);
@@ -28,6 +34,14 @@ SimpleFraction SimpleFraction::operator-(SimpleFraction S1) const
 SimpleFraction SimpleFraction::operator*(SimpleFraction S1) const
 {
     return SimpleFraction(numerator * S1.numerator, denominator * S1.denominator);
+}
+
+SimpleFraction SimpleFraction::operator-() const
+{
+    SimpleFraction result;    //Done like this as there is no need to normalise
+    result.numerator = -numerator;
+    result.denominator = denominator;
+    return result;
 }
 
 void SimpleFraction::normalise()
@@ -121,6 +135,11 @@ Fraction Fraction::operator*(SafeInt<int64_t> I1) const
     result.normalise();
     
     return result;
+}
+
+Fraction Fraction::operator-() const
+{
+    return Fraction(-integer, -numerator, denominator);
 }
 
 void Fraction::normalise()
