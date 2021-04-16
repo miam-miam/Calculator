@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
+#include <cfenv>
 #include "safeInt.hpp"
 #include "exceptions.h"
 
