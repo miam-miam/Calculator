@@ -60,6 +60,11 @@ void SimpleFraction::normalise()
     }
 }
 
+SimpleFraction SimpleFraction::invert() const
+{
+    return SimpleFraction(denominator, numerator);
+}
+
 Fraction::Fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen)    // Not unused
 {
     integer = GivenInt;
@@ -158,6 +163,11 @@ void Fraction::normalise()
         denominator = denominator / gcd;
     }
     
+}
+
+Fraction Fraction::invert() const
+{
+    return Fraction(denominator, numerator + denominator * integer);
 }
 
 Power::Power(Fraction GivenMultiplicand, SimpleFraction GivenBase, SimpleFraction GivenExponent)

@@ -32,6 +32,8 @@ struct SimpleFraction
     SimpleFraction operator*(SimpleFraction) const;
     
     void normalise();
+    
+    [[nodiscard]] SimpleFraction invert() const;
 };
 
 struct Fraction
@@ -69,6 +71,8 @@ struct Fraction
     Fraction operator*(SafeInt<int64_t>) const;
     
     void normalise();
+    
+    [[nodiscard]] Fraction invert() const;
 };
 
 struct Power

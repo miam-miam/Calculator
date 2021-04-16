@@ -347,7 +347,35 @@ Number Number::operator/(const Number N1) const
                 + fraction.denominator * N1.fraction.numerator;
             return Number(numerator, denominator);
         }
-        //TODO power types
+        if (type == POWER_TYPE && N1.type == INTEGER_TYPE)
+        {
+            return Number(power.multiplicand * Fraction(0,1,N1.integer), N1.power.base, N1.power.exponent);
+        }
+        if (type == INTEGER_TYPE && N1.type == POWER_TYPE)
+        {
+            return Number(N1.power.multiplicand.invert() * integer, N1.power.base, N1.power.exponent);
+        }
+        if (type == POWER_TYPE && N1.type == FRACTION_TYPE)
+        {
+            return Number(power.multiplicand * N1.fraction.invert(), power.base, power.exponent);
+        }
+        if (type == FRACTION_TYPE && N1.type == POWER_TYPE)
+        {
+            return Number(fraction * N1.power.multiplicand.invert(), N1.power.base, N1.power.exponent);
+        }
+        if (type == POWER_TYPE && N1.type == POWER_TYPE)
+        {
+            if (power.base == N1.power.base)
+            {
+                return Number(power.multiplicand * N1.power.multiplicand.invert(),
+                              power.base,
+                              power.exponent - N1.power.exponent);
+            }
+            else if (power.exponent == N1.power.exponent)
+            {
+                return Number(power.multiplicand * N1.power.multiplicand.invert(), power.base * N1.power.base.invert(), power.exponent);
+            }
+        }
     }
     catch (const SafeIntException &err)
     {
