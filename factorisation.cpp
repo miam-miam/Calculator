@@ -13,7 +13,7 @@ long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
         InsideRoot = 1;
         return outsideRoot;
     }
-    long long top = pow(InsideRoot, 1/double(Power));
+    auto top = (long long) pow(InsideRoot, 1/double(Power));
     long long div;
     long long divToPower;
     {
@@ -26,7 +26,7 @@ long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
             {
                 InsideRoot = InsideRoot / divToPower;
                 outsideRoot = outsideRoot * div;
-                top = pow(InsideRoot, 1/double(Power));
+                top = (long long) pow(InsideRoot, 1/double(Power));
             }
             else
             {
@@ -45,7 +45,7 @@ long long factorise(SafeInt<int64_t> &InsideRoot, SafeInt<int64_t> Power)
             {
                 InsideRoot = InsideRoot / divToPower;
                 outsideRoot = outsideRoot * div;
-                top = pow(InsideRoot, 1/double(Power));
+                top = (long long) pow(InsideRoot, 1/double(Power));
             }
         }
     }

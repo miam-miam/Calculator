@@ -123,7 +123,7 @@ Number::operator double() const
         }
         case POWER_TYPE:
         {
-            return double(power.multiplicand) + pow(double(power.base), double(power.exponent));
+            return double(power);
         }
     }
 }

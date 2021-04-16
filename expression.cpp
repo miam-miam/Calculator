@@ -38,7 +38,7 @@ void Expression::tokenise(std::queue<Token> &InfixTokens, std::string_view &Stri
                     break;
                 }
             }
-            Number* tempNumber = new Number;
+            auto* tempNumber = new Number;
             if (space)
             {
                 std::string stringNumber = String.substr(i, j - i).data();

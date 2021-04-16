@@ -164,7 +164,7 @@ Number powNum(Number Base, Number Exponent)
         }
         else if (Base.type == Number::INTEGER_TYPE && Exponent.type == Number::FRACTION_TYPE && Exponent.fraction.integer > 0)
         {
-            SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
+            auto simpleExponent = SimpleFraction(Exponent.fraction);
             result.power.base = SimpleFraction(Base.integer, 1);
             result.type = Number::POWER_TYPE;
             if (Exponent.fraction.denominator == 1) {assert(0);} // Fraction should not be an integer
@@ -193,8 +193,8 @@ Number powNum(Number Base, Number Exponent)
         }
         else if ((Base.type == Number::FRACTION_TYPE || Exponent.fraction.integer <= 0) && Exponent.type == Number::FRACTION_TYPE)
         {
-            SimpleFraction simpleExponent = SimpleFraction(Exponent.fraction);
-            SimpleFraction newBase = SimpleFraction();
+            auto simpleExponent = SimpleFraction(Exponent.fraction);
+            auto newBase = SimpleFraction();
             result.type = Number::POWER_TYPE;
             
             if (Base.type == Number::INTEGER_TYPE)
