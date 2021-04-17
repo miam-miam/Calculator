@@ -260,7 +260,7 @@ Number powNum(Number Base, Number Exponent) //TODO Do powNum for all other numbe
                 }
             }
             
-            if (_abs64(newBase.numerator) == 1 && newBase.denominator == 1 && !(simpleExponent.denominator % 2 == 0
+            if (abs((long long) newBase.numerator) == 1 && newBase.denominator == 1 && !(simpleExponent.denominator % 2 == 0
                 && newBase.numerator == -1)) // Can simplify to simpler types but must remove complex numbers
             {
                 return Number((newBase.numerator == -1 && simpleExponent.numerator % 2 == 1)
