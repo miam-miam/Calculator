@@ -3,45 +3,6 @@
 #include <functional>
 
 
-struct SimpleFraction
-{
-    SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
-    
-    SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
-    
-    explicit SimpleFraction(SafeInt<int64_t> GivenNum); // does not normalise
-    
-    SimpleFraction()
-    {
-        numerator = 0;
-        denominator = 1;
-    }
-    
-    SafeInt<int64_t> numerator;
-    SafeInt<int64_t> denominator;
-    
-    explicit operator SafeInt<int64_t>() const
-    { return numerator / denominator; }
-    
-    explicit operator double() const
-    { return double(numerator) / double(denominator); }
-    
-    bool operator==(const SimpleFraction &Other) const
-    { return numerator == Other.numerator && denominator == Other.denominator; }
-    
-    SimpleFraction operator+(SimpleFraction) const;
-    
-    SimpleFraction operator-(SimpleFraction) const;
-    
-    SimpleFraction operator*(SimpleFraction) const;
-    
-    SimpleFraction operator-() const;
-    
-    void normalise();
-    
-    [[nodiscard]] SimpleFraction invert() const;
-};
-
 struct Fraction
 {
     Fraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
@@ -65,9 +26,6 @@ struct Fraction
     explicit operator double() const
     { return double(integer) + double(numerator) / double(denominator); }
     
-    explicit operator SimpleFraction() const
-    { return SimpleFraction(numerator + integer * denominator, denominator); }
-    
     Fraction operator+(Fraction) const;
     
     Fraction operator-(Fraction) const;
@@ -81,6 +39,54 @@ struct Fraction
     void normalise();
     
     [[nodiscard]] Fraction invert() const;
+};
+
+struct SimpleFraction
+{
+    SimpleFraction(SafeInt<int64_t> GivenInt, SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
+    
+    SimpleFraction(SafeInt<int64_t> GivenNum, SafeInt<int64_t> GivenDen); // normalises
+    
+    explicit SimpleFraction(SafeInt<int64_t> GivenNum); // does not normalise
+    
+    explicit SimpleFraction(Fraction GivenFrac) : numerator{ GivenFrac.numerator + GivenFrac.denominator * GivenFrac.integer }, denominator{ GivenFrac.denominator }{};
+    
+    
+    SimpleFraction()
+    {
+        numerator = 0;
+        denominator = 1;
+    }
+    
+    SafeInt<int64_t> numerator;
+    SafeInt<int64_t> denominator;
+    
+    explicit operator SafeInt<int64_t>() const
+    {
+        return numerator / denominator;
+    }
+    
+    explicit operator double() const
+    {
+        return double(numerator) / double(denominator);
+    }
+    
+    bool operator==(const SimpleFraction& Other) const
+    {
+        return numerator == Other.numerator && denominator == Other.denominator;
+    }
+    
+    SimpleFraction operator+(SimpleFraction) const;
+    
+    SimpleFraction operator-(SimpleFraction) const;
+    
+    SimpleFraction operator*(SimpleFraction) const;
+    
+    SimpleFraction operator-() const;
+    
+    void normalise();
+    
+    [[nodiscard]] SimpleFraction invert() const;
 };
 
 struct Power
