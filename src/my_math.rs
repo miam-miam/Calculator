@@ -82,5 +82,5 @@ pub fn ten_to_the_power_of(exponent: i128) -> Option<i128> {
     for _ in 0..exponent {
         count *= 10;
     }
-    return Some(count);
+    Some(count)
 }

@@ -59,8 +59,8 @@ impl Fraction {
             return MathError::InvalidFraction;
         }
         let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
-        self.num = self.num / gcd;
-        self.den = self.den / gcd;
+        self.num /= gcd;
+        self.den /= gcd;
         MathError::None
     }
 }

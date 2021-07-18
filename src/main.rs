@@ -1,5 +1,4 @@
 use calculator::expression;
-use calculator::number;
 use std::io;
 
 fn main() {

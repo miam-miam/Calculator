@@ -90,7 +90,7 @@ impl<'a> Expression<'a> {
                                 self.infix_token.push(my_math::Token::Integer(integer));
                             } else {
                                 match my_math::ten_to_the_power_of(
-                                    (&new_string.len() - idx - 1) as i128,
+                                    (new_string.len() - idx - 1) as i128,
                                 ) {
                                     None => match match_string_to_float(&new_string) {
                                         Some(x) => {
@@ -161,7 +161,7 @@ impl<'a> Expression<'a> {
                 });
             }
         }
-        return my_math::MathError::None;
+        my_math::MathError::None
     }
 }
 
