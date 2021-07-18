@@ -20,10 +20,16 @@ impl<'a> Expression<'a> {
         }
     }
     pub fn tokenise(&mut self) -> my_math::MathError {
+        let string_char_len = self.string.chars().count();
         let mut decimal_point_index = None;
         let mut checking_number = false;
         let mut new_string: String = String::new();
-        for (elem, next) in self.string.chars().chain(vec![' ']).tuple_windows() {
+        for (idx, (elem, next)) in self.string.chars().chain([' ']).tuple_windows().enumerate() {
+            if !checking_number && '0' <= elem && elem <= '9' {
+                checking_number = true;
+                decimal_point_index = None;
+                new_string = String::new();
+            } // Not using else if as checking number can change inside previous if statement.
             if checking_number {
                 if elem == '.' {
                     new_string.push('.');
@@ -38,7 +44,9 @@ impl<'a> Expression<'a> {
                 } else if '0' <= elem && elem <= '9' {
                     new_string.push(elem);
                 }
-                if !(('0' <= next && next <= '9') || next == ' ') {
+                if !(('0' <= next && next <= '9') || next == ' ' || next == '.')
+                    || idx == string_char_len - 1
+                {
                     checking_number = false;
                     match decimal_point_index {
                         None => match new_string.parse::<i128>() {
@@ -54,10 +62,10 @@ impl<'a> Expression<'a> {
                                 }
                             },
                         },
-                        Some(idx) => {
+                        Some(index) => {
                             let integer: i128;
                             let decimal: i128;
-                            match (&new_string[0..idx]).parse::<i128>() {
+                            match (&new_string[0..index]).parse::<i128>() {
                                 Ok(result) => {
                                     integer = result;
                                 }
@@ -72,7 +80,7 @@ impl<'a> Expression<'a> {
                                 },
                             }
 
-                            match (&new_string[idx + 1..]).parse::<i128>() {
+                            match (&new_string[index + 1..]).parse::<i128>() {
                                 Ok(result) => {
                                     decimal = result;
                                 }
@@ -90,7 +98,7 @@ impl<'a> Expression<'a> {
                                 self.infix_token.push(my_math::Token::Integer(integer));
                             } else {
                                 match my_math::ten_to_the_power_of(
-                                    (new_string.len() - idx - 1) as i128,
+                                    (new_string.len() - index - 1) as i128,
                                 ) {
                                     None => match match_string_to_float(&new_string) {
                                         Some(x) => {
@@ -127,26 +135,6 @@ impl<'a> Expression<'a> {
                         }
                     }
                 }
-            } else if '0' <= elem && elem <= '9' {
-                if !(('0' <= next && next <= '9') || next == ' ' || next == '.') {
-                    self.infix_token.push(my_math::Token::Integer(match elem {
-                        '0' => 0,
-                        '1' => 1,
-                        '2' => 2,
-                        '3' => 3,
-                        '4' => 4,
-                        '5' => 5,
-                        '6' => 6,
-                        '7' => 7,
-                        '8' => 8,
-                        '9' => 9,
-                        _ => return my_math::MathError::Impossible,
-                    }))
-                } else {
-                    checking_number = true;
-                    decimal_point_index = None;
-                    new_string = String::from(elem);
-                }
             } else if elem != ' ' {
                 self.infix_token.push(match elem {
                     '+' => my_math::Token::Plus,
@@ -156,6 +144,7 @@ impl<'a> Expression<'a> {
                     '(' => my_math::Token::LBracket,
                     ')' => my_math::Token::RBracket,
                     _ => {
+                        println!("{}", elem);
                         return my_math::MathError::UnknownOperator;
                     }
                 });

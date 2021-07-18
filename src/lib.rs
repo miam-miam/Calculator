@@ -34,7 +34,17 @@ mod tests {
                 my_math::Token::Integer(9),
                 my_math::Token::RBracket,
             ]
-        )
+        );
+        let mut expr1 = expression::Expression::new("56+9");
+        assert_eq!(expr1.tokenise(), my_math::MathError::None);
+        assert_eq!(
+            expr1.infix_token,
+            vec![
+                my_math::Token::Integer(56),
+                my_math::Token::Plus,
+                my_math::Token::Integer(9)
+            ]
+        );
     }
     #[test]
     fn normalise() {
