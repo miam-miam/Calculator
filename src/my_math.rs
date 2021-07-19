@@ -4,7 +4,7 @@ use core::fmt;
 const MAX_I128_LOG_2: i128 = 127;
 const MAX_I128_LOG_10: i128 = 38;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum Token {
     Integer(i128),
     Fraction(number::Fraction),

@@ -1,28 +1,8 @@
-use crate::my_math::MathError;
+use crate::my_math;
 use core::fmt;
 use gcd::Gcd;
 
-#[macro_use]
-mod macro_num {
-    macro_rules! mul {
-    {$lhs:expr, $rhs:expr} => (match $lhs.checked_mul($rhs) {Some(i) => i, None => return MathError::Overflow});
-    {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_mul($rhs) {Some(i) => i, None => return $error});
-    }
-    macro_rules! add {
-    {$lhs:expr, $rhs:expr} => (match $lhs.checked_add($rhs) {Some(i) => {i}, None =>  return MathError::Overflow});
-    {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_add($rhs) {Some(i) => i, None => return $error});
-    }
-    macro_rules! sub {
-    {$lhs:expr, $rhs:expr} => (match $lhs.checked_sub($rhs) {Some(i) => i, None => return MathError::Overflow});
-    {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_sub($rhs) {Some(i) => i, None => return $error});
-    }
-    macro_rules! div {
-    {$lhs:expr, $rhs:expr} => (match $lhs.checked_div($rhs) {Some(i) => i, None => return MathError::Overflow});
-    {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_div($rhs) {Some(i) => i, None => return $error});
-    }
-}
-
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Fraction {
     pub int: i128,
     pub num: i128,
@@ -36,10 +16,10 @@ impl fmt::Display for Fraction {
 }
 
 impl Fraction {
-    pub fn normalise(&mut self) -> MathError {
+    pub fn normalise(&mut self) -> my_math::MathError {
         // At the end den must be positive
         if self.den == 0 {
-            return MathError::DivisionByZero;
+            return my_math::MathError::DivisionByZero;
         }
         if self.den < 0 {
             self.num = mul!(self.num, -1);
@@ -48,7 +28,7 @@ impl Fraction {
         if self.den == 1 {
             self.int = add!(self.int, self.num);
             self.num = 0;
-            return MathError::InvalidFraction;
+            return my_math::MathError::InvalidFraction;
         }
         if self.num >= self.den {
             self.int = add!(self.int, self.num / self.den);
@@ -56,16 +36,16 @@ impl Fraction {
         }
         if self.num == 0 {
             self.den = 1;
-            return MathError::InvalidFraction;
+            return my_math::MathError::InvalidFraction;
         }
         let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
         self.num /= gcd;
         self.den /= gcd;
-        MathError::None
+        my_math::MathError::None
     }
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct SimpleFraction {
     pub num: i128,
     pub den: i128,

@@ -6,7 +6,7 @@ use itertools::Itertools;
 pub struct Expression<'a> {
     string: &'a str,
     pub infix_token: Vec<my_math::Token>,
-    postfix_token: Vec<my_math::Token>,
+    pub postfix_token: Vec<my_math::Token>,
     result: my_math::Token,
 }
 
@@ -144,11 +144,67 @@ impl<'a> Expression<'a> {
                     '(' => my_math::Token::LBracket,
                     ')' => my_math::Token::RBracket,
                     _ => {
-                        println!("{}", elem);
                         return my_math::MathError::UnknownOperator;
                     }
                 });
             }
+        }
+        my_math::MathError::None
+    }
+    pub fn postfix(&mut self) -> my_math::MathError {
+        self.postfix_token = vec![];
+        let mut operator_stack = vec![];
+        for token in self.infix_token.iter().copied() {
+            match token {
+                my_math::Token::Integer(_)
+                | my_math::Token::Fraction(_)
+                | my_math::Token::Power(_, _, _)
+                | my_math::Token::Double(_) => {
+                    self.postfix_token.push(token);
+                }
+                my_math::Token::Plus
+                | my_math::Token::Minus
+                | my_math::Token::Multiply
+                | my_math::Token::Divide => {
+                    while let Some(operator) = operator_stack.pop() {
+                        if operator != my_math::Token::LBracket
+                            && precedence!(operator) >= precedence!(token)
+                        {
+                            //If implementing powers precedence cannot be equal as it is right associative and not left.
+                            self.postfix_token.push(operator);
+                        } else {
+                            operator_stack.push(operator);
+                            break;
+                        }
+                    }
+                    operator_stack.push(token);
+                }
+                my_math::Token::LBracket => {
+                    operator_stack.push(token);
+                }
+                my_math::Token::RBracket => {
+                    let mut l_bracket_reached = false;
+                    while let Some(operator) = operator_stack.pop() {
+                        if operator == my_math::Token::LBracket {
+                            l_bracket_reached = true;
+                            break;
+                        }
+                        self.postfix_token.push(operator);
+                    }
+                    if !l_bracket_reached {
+                        return my_math::MathError::UnmatchedBracket;
+                    }
+                }
+                my_math::Token::None => {
+                    return my_math::MathError::UnknownOperator;
+                }
+            }
+        }
+        while let Some(operator) = operator_stack.pop() {
+            if let my_math::Token::LBracket | my_math::Token::RBracket = operator {
+                return my_math::MathError::UnmatchedBracket;
+            }
+            self.postfix_token.push(operator);
         }
         my_math::MathError::None
     }
