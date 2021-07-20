@@ -1,58 +1,77 @@
-use crate::my_math;
-use core::fmt;
-use gcd::Gcd;
+use crate::types::{Fraction, MathError, Token};
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct Fraction {
-    pub int: i128,
-    pub num: i128,
-    pub den: i128,
+pub struct Com {
+    // Stands for Commutative
+    pub l_num: Token,
+    pub r_num: Token,
 }
 
-impl fmt::Display for Fraction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}+{}/{}", self.int, self.num, self.den)
+impl Com {
+    pub fn new(l_num: Token, r_num: Token) -> Result<Com, MathError> {
+        // Should go double, power, fraction and integer
+        match (l_num, r_num) {
+            (Token::Double(_), _) => Ok(Com { l_num, r_num }),
+            (_, Token::Double(_)) => Ok(Com {
+                l_num: r_num,
+                r_num: l_num,
+            }),
+            (Token::Power(..), _) => Ok(Com { l_num, r_num }),
+            (_, Token::Power(..)) => Ok(Com {
+                l_num: r_num,
+                r_num: l_num,
+            }),
+            (Token::Fraction(_), _) => Ok(Com { l_num, r_num }),
+            (_, Token::Fraction(_)) => Ok(Com {
+                l_num: r_num,
+                r_num: l_num,
+            }),
+            (Token::Integer(_), _) => Ok(Com { l_num, r_num }),
+            (_, Token::Integer(_)) => Ok(Com {
+                l_num: r_num,
+                r_num: l_num,
+            }),
+            (_, _) => Err(MathError::Impossible),
+        }
     }
 }
 
-impl Fraction {
-    pub fn normalise(&mut self) -> my_math::MathError {
-        // At the end den must be positive
-        if self.den == 0 {
-            return my_math::MathError::DivisionByZero;
+pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
+    let try_add = |com: &Com| -> Result<Token, MathError> {
+        match *com {
+            Com {
+                l_num: Token::Double(la),
+                r_num: ra,
+            } => Ok(Token::Double(double_check!(la + double!(ra)))),
+            // Com {
+            //     l_num: Token::Power(la),
+            //     r_num: ra,
+            // } => Ok(Token::Double(double_check!(la + double!(ra)))),
+            Com {
+                l_num: Token::Fraction(mut la),
+                r_num: Token::Fraction(ra),
+            } => {
+                la.add(&ra)?;
+                Ok(Token::Fraction(la))
+            }
+            Com {
+                l_num: Token::Fraction(mut la),
+                r_num: Token::Integer(ra),
+            } => {
+                la.int = add!(la.int, ra);
+                Ok(Token::Fraction(la))
+            }
+            Com {
+                l_num: Token::Integer(la),
+                r_num: Token::Integer(ra),
+            } => Ok(Token::Integer(add!(la, ra))),
+            _ => Err(MathError::Impossible),
         }
-        if self.den < 0 {
-            self.num = mul!(self.num, -1);
-            self.den = mul!(self.den, -1);
-        }
-        if self.den == 1 {
-            self.int = add!(self.int, self.num);
-            self.num = 0;
-            return my_math::MathError::InvalidFraction;
-        }
-        if self.num >= self.den {
-            self.int = add!(self.int, self.num / self.den);
-            self.num -= (self.num / self.den) * self.den;
-        }
-        if self.num == 0 {
-            self.den = 1;
-            return my_math::MathError::InvalidFraction;
-        }
-        let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
-        self.num /= gcd;
-        self.den /= gcd;
-        my_math::MathError::None
-    }
-}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct SimpleFraction {
-    pub num: i128,
-    pub den: i128,
-}
-
-impl fmt::Display for SimpleFraction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}/{}", self.num, self.den)
+    };
+    let commutative = Com::new(l_number, r_number)?;
+    match try_add(&commutative) {
+        Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            double!(commutative.l_num) + double!(commutative.r_num)
+        ))),
+        value => value,
     }
 }

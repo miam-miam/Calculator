@@ -1,4 +1,4 @@
-use calculator::expression;
+use calculator::expression::Expression;
 use std::io;
 
 fn main() {
@@ -8,7 +8,7 @@ fn main() {
             .read_line(&mut string_expression)
             .expect("Failed to read line");
         let str_expression = string_expression.trim_end_matches(is_newline);
-        let mut expr = expression::Expression::new(&str_expression);
+        let mut expr = Expression::new(&str_expression);
         println!("{} With tokens: {:?}", expr.tokenise(), expr.infix_token);
         println!("{} With tokens: {:?}", expr.postfix(), expr.postfix_token);
     }

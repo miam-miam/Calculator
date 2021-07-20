@@ -1,13 +1,13 @@
-use crate::my_math;
-use crate::number;
-
 use itertools::Itertools;
+
+use crate::my_math::ten_to_the_power_of;
+use crate::types::{Fraction, MathError, Token};
 
 pub struct Expression<'a> {
     string: &'a str,
-    pub infix_token: Vec<my_math::Token>,
-    pub postfix_token: Vec<my_math::Token>,
-    result: my_math::Token,
+    pub infix_token: Vec<Token>,
+    pub postfix_token: Vec<Token>,
+    result: Token,
 }
 
 impl<'a> Expression<'a> {
@@ -16,10 +16,11 @@ impl<'a> Expression<'a> {
             string,
             infix_token: vec![],
             postfix_token: vec![],
-            result: my_math::Token::None,
+            result: Token::None,
         }
     }
-    pub fn tokenise(&mut self) -> my_math::MathError {
+    #[allow(clippy::manual_range_contains)]
+    pub fn tokenise(&mut self) -> MathError {
         let string_char_len = self.string.chars().count();
         let mut decimal_point_index = None;
         let mut checking_number = false;
@@ -38,7 +39,7 @@ impl<'a> Expression<'a> {
                             decimal_point_index = Some(new_string.len() - 1);
                         }
                         Some(_) => {
-                            return my_math::MathError::InvalidDecimalPoint;
+                            return MathError::InvalidDecimalPoint;
                         }
                     }
                 } else if '0' <= elem && elem <= '9' {
@@ -51,14 +52,14 @@ impl<'a> Expression<'a> {
                     match decimal_point_index {
                         None => match new_string.parse::<i128>() {
                             Ok(result) => {
-                                self.infix_token.push(my_math::Token::Integer(result));
+                                self.infix_token.push(Token::Integer(result));
                             }
                             Err(_) => match match_string_to_float(&new_string) {
                                 Some(result) => {
-                                    self.infix_token.push(my_math::Token::Double(result));
+                                    self.infix_token.push(Token::Double(result));
                                 }
                                 None => {
-                                    return my_math::MathError::Overflow;
+                                    return MathError::DoubleOverflow;
                                 }
                             },
                         },
@@ -71,11 +72,11 @@ impl<'a> Expression<'a> {
                                 }
                                 Err(_) => match match_string_to_float(&new_string) {
                                     Some(x) => {
-                                        self.infix_token.push(my_math::Token::Double(x));
+                                        self.infix_token.push(Token::Double(x));
                                         continue;
                                     }
                                     None => {
-                                        return my_math::MathError::Overflow;
+                                        return MathError::DoubleOverflow;
                                     }
                                 },
                             }
@@ -86,48 +87,46 @@ impl<'a> Expression<'a> {
                                 }
                                 Err(_) => match match_string_to_float(&new_string) {
                                     Some(x) => {
-                                        self.infix_token.push(my_math::Token::Double(x));
+                                        self.infix_token.push(Token::Double(x));
                                         continue;
                                     }
                                     None => {
-                                        return my_math::MathError::Overflow;
+                                        return MathError::DoubleOverflow;
                                     }
                                 },
                             }
                             if decimal == 0 {
-                                self.infix_token.push(my_math::Token::Integer(integer));
+                                self.infix_token.push(Token::Integer(integer));
                             } else {
-                                match my_math::ten_to_the_power_of(
-                                    (new_string.len() - index - 1) as i128,
-                                ) {
+                                match ten_to_the_power_of((new_string.len() - index - 1) as i128) {
                                     None => match match_string_to_float(&new_string) {
                                         Some(x) => {
-                                            self.infix_token.push(my_math::Token::Double(x));
+                                            self.infix_token.push(Token::Double(x));
                                             continue;
                                         }
                                         None => {
-                                            return my_math::MathError::Overflow;
+                                            return MathError::DoubleOverflow;
                                         }
                                     },
                                     Some(result) => {
-                                        let mut fraction = number::Fraction {
+                                        let mut fraction = Fraction {
                                             int: integer,
                                             num: decimal,
                                             den: result,
                                         };
                                         self.infix_token.push(match fraction.normalise() {
-                                            my_math::MathError::InvalidFraction => {
-                                                my_math::Token::Integer(fraction.int)
+                                            Err(MathError::InvalidFraction) => {
+                                                Token::Integer(fraction.int)
                                             }
-                                            my_math::MathError::Overflow => {
+                                            Err(MathError::Overflow) => {
                                                 match match_string_to_float(&new_string) {
-                                                    Some(x) => my_math::Token::Double(x),
+                                                    Some(x) => Token::Double(x),
                                                     None => {
-                                                        return my_math::MathError::Overflow;
+                                                        return MathError::DoubleOverflow;
                                                     }
                                                 }
                                             }
-                                            _ => my_math::Token::Fraction(fraction),
+                                            _ => Token::Fraction(fraction),
                                         })
                                     }
                                 }
@@ -137,37 +136,34 @@ impl<'a> Expression<'a> {
                 }
             } else if elem != ' ' {
                 self.infix_token.push(match elem {
-                    '+' => my_math::Token::Plus,
-                    '-' => my_math::Token::Minus,
-                    '*' => my_math::Token::Multiply,
-                    '/' => my_math::Token::Divide,
-                    '(' => my_math::Token::LBracket,
-                    ')' => my_math::Token::RBracket,
+                    '+' => Token::Plus,
+                    '-' => Token::Minus,
+                    '*' => Token::Multiply,
+                    '/' => Token::Divide,
+                    '(' => Token::LBracket,
+                    ')' => Token::RBracket,
                     _ => {
-                        return my_math::MathError::UnknownOperator;
+                        return MathError::UnknownOperator;
                     }
                 });
             }
         }
-        my_math::MathError::None
+        MathError::None
     }
-    pub fn postfix(&mut self) -> my_math::MathError {
+    pub fn postfix(&mut self) -> MathError {
         self.postfix_token = vec![];
         let mut operator_stack = vec![];
         for token in self.infix_token.iter().copied() {
             match token {
-                my_math::Token::Integer(_)
-                | my_math::Token::Fraction(_)
-                | my_math::Token::Power(_, _, _)
-                | my_math::Token::Double(_) => {
+                Token::Integer(_)
+                | Token::Fraction(_)
+                | Token::Power(_, _, _)
+                | Token::Double(_) => {
                     self.postfix_token.push(token);
                 }
-                my_math::Token::Plus
-                | my_math::Token::Minus
-                | my_math::Token::Multiply
-                | my_math::Token::Divide => {
+                Token::Plus | Token::Minus | Token::Multiply | Token::Divide => {
                     while let Some(operator) = operator_stack.pop() {
-                        if operator != my_math::Token::LBracket
+                        if operator != Token::LBracket
                             && precedence!(operator) >= precedence!(token)
                         {
                             //If implementing powers precedence cannot be equal as it is right associative and not left.
@@ -179,41 +175,41 @@ impl<'a> Expression<'a> {
                     }
                     operator_stack.push(token);
                 }
-                my_math::Token::LBracket => {
+                Token::LBracket => {
                     operator_stack.push(token);
                 }
-                my_math::Token::RBracket => {
+                Token::RBracket => {
                     let mut l_bracket_reached = false;
                     while let Some(operator) = operator_stack.pop() {
-                        if operator == my_math::Token::LBracket {
+                        if operator == Token::LBracket {
                             l_bracket_reached = true;
                             break;
                         }
                         self.postfix_token.push(operator);
                     }
                     if !l_bracket_reached {
-                        return my_math::MathError::UnmatchedBracket;
+                        return MathError::UnmatchedBracket;
                     }
                 }
-                my_math::Token::None => {
-                    return my_math::MathError::UnknownOperator;
+                Token::None => {
+                    return MathError::UnknownOperator;
                 }
             }
         }
         while let Some(operator) = operator_stack.pop() {
-            if let my_math::Token::LBracket | my_math::Token::RBracket = operator {
-                return my_math::MathError::UnmatchedBracket;
+            if let Token::LBracket | Token::RBracket = operator {
+                return MathError::UnmatchedBracket;
             }
             self.postfix_token.push(operator);
         }
-        my_math::MathError::None
+        MathError::None
     }
 }
 
 fn match_string_to_float(string: &str) -> Option<f64> {
     match string.parse::<f64>() {
         Ok(i) => {
-            if i == f64::INFINITY || i == f64::NEG_INFINITY || i == 0.0_f64 {
+            if i == f64::INFINITY || i == f64::NEG_INFINITY {
                 return None;
             }
             Some(i)
