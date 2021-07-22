@@ -141,4 +141,34 @@ mod tests {
             number::add(expr.infix_token[20], expr.infix_token[22])
         );
     }
+
+    #[test]
+    fn sub() {
+        let mut expr = expression::Expression::new("5-1+5.1-2+5.1-9.5+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            Ok(types::Token::Integer(4)),
+            number::sub(expr.infix_token[0], expr.infix_token[2])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(3, 1, 10))),
+            number::sub(expr.infix_token[4], expr.infix_token[6])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(-4, -2, 5))),
+            number::sub(expr.infix_token[8], expr.infix_token[10])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(-4_f64)),
+            number::sub(expr.infix_token[12], expr.infix_token[14])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(0_f64)),
+            number::sub(expr.infix_token[16], expr.infix_token[18])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(2.0999999999999996_f64)),
+            number::sub(expr.infix_token[20], expr.infix_token[22])
+        );
+    }
 }

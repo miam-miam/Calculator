@@ -20,7 +20,7 @@ macro_rules! precedence {
 
 // Only using fully defined values so warning is not a problem.
 macro_rules! double_check {
-    {$op:expr} => (match $op {f64::INFINITY | f64::NEG_INFINITY | f64::NAN => { return Err(MathError::DoubleOverflow);}, x => {x}});
+    {$op:expr} => (match $op {f64::INFINITY | f64::NEG_INFINITY => { return Err(MathError::DoubleOverflow);}, x if x.is_nan() => { return Err(MathError::Error); }, x => {x}});
 }
 
 macro_rules! double {

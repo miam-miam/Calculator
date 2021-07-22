@@ -47,6 +47,7 @@ pub enum MathError {
     // For 0^0
     PowerError,
     InvalidDecimalPoint,
+    Error,
     // Using Fraction to store int
     InvalidFraction,
     Impossible,
@@ -65,6 +66,7 @@ impl fmt::Display for MathError {
             MathError::PowerError => write!(f, "Cannot compute 0^0"),
             MathError::InvalidDecimalPoint => write!(f, "Invalid decimal point"),
             MathError::InvalidFraction => write!(f, "Fraction should be integer"),
+            MathError::Error => write!(f, "A general error happened"),
             MathError::Impossible => write!(f, "Not possible"),
         }
     }
@@ -119,6 +121,13 @@ impl Fraction {
     pub fn add(&mut self, rhs: &Fraction) -> Result<(), MathError> {
         self.int = add!(self.int, rhs.int);
         self.num = add!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
+        self.den = mul!(self.den, rhs.den);
+        self.normalise()
+    }
+
+    pub fn sub(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+        self.int = sub!(self.int, rhs.int);
+        self.num = sub!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
