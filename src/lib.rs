@@ -9,6 +9,7 @@ pub mod types;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::MathError;
 
     #[test]
     fn tokenise() {
@@ -169,6 +170,66 @@ mod tests {
         assert_eq!(
             Ok(types::Token::Double(2.0999999999999996_f64)),
             number::sub(expr.infix_token[20], expr.infix_token[22])
+        );
+    }
+
+    #[test]
+    fn mul() {
+        let mut expr = expression::Expression::new("5*1+5.1*2+5.1*9.5+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001*9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001*5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1*5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            Ok(types::Token::Integer(5)),
+            number::mul(expr.infix_token[0], expr.infix_token[2])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(10, 1, 5))),
+            number::mul(expr.infix_token[4], expr.infix_token[6])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(48, 9, 20))),
+            number::mul(expr.infix_token[8], expr.infix_token[10])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(45_f64)),
+            number::mul(expr.infix_token[12], expr.infix_token[14])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(25_f64)),
+            number::mul(expr.infix_token[16], expr.infix_token[18])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(35.5_f64)),
+            number::mul(expr.infix_token[20], expr.infix_token[22])
+        );
+    }
+
+    #[test]
+    fn div() {
+        let mut expr = expression::Expression::new("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1/0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            Ok(types::Token::Integer(5)),
+            number::div(expr.infix_token[0], expr.infix_token[2])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(2, 11, 20))),
+            number::div(expr.infix_token[4], expr.infix_token[6])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(0, 51, 95))),
+            number::div(expr.infix_token[8], expr.infix_token[10])
+        );
+        assert_eq!(
+            Ok(types::Token::Fraction(types::Fraction::new(0, 5, 9))),
+            number::div(expr.infix_token[12], expr.infix_token[14])
+        );
+        assert_eq!(
+            Ok(types::Token::Double(1_f64)),
+            number::div(expr.infix_token[16], expr.infix_token[18])
+        );
+        assert_eq!(
+            Err(MathError::DivisionByZero),
+            number::div(expr.infix_token[20], expr.infix_token[22])
         );
     }
 }
