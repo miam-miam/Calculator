@@ -131,6 +131,26 @@ impl Fraction {
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
+
+    pub fn mul(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+        self.num = add!(
+            mul!(self.num, rhs.num),
+            add!(
+                mul!(mul!(rhs.int, rhs.den), self.num),
+                mul!(mul!(self.den, rhs.num), self.int)
+            )
+        );
+        self.int = mul!(self.int, rhs.int);
+        self.den = mul!(self.den, rhs.den);
+        self.normalise()
+    }
+
+    pub fn div(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+        self.num = mul!(rhs.den, add!(self.num, mul!(self.int, self.den)));
+        self.den = mul!(self.den, add!(rhs.num, mul!(rhs.int, rhs.den)));
+        self.int = 0;
+        self.normalise()
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]

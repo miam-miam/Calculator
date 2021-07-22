@@ -1,4 +1,4 @@
-use crate::types::{MathError, Token};
+use crate::types::{Fraction, MathError, Token};
 
 #[derive(Copy, Clone)]
 pub struct Com {
@@ -108,6 +108,115 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_sub((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
             double!(l_number) - double!(r_number)
+        ))),
+        value => value,
+    }
+}
+
+pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
+    let try_mul = |com: Com| -> Result<Token, MathError> {
+        match com {
+            Com {
+                l_num: Token::Double(la),
+                r_num: ra,
+            } => Ok(Token::Double(double_check!(la * double!(ra)))),
+            Com {
+                l_num: Token::Fraction(mut la),
+                r_num: Token::Fraction(ra),
+            } => {
+                return match la.mul(&ra) {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la)),
+                }
+            }
+            Com {
+                l_num: Token::Fraction(mut la),
+                r_num: Token::Integer(ra),
+            } => {
+                la.int = mul!(la.int, ra);
+                la.num = mul!(la.num, ra);
+                return match la.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la)),
+                };
+            }
+            Com {
+                l_num: Token::Integer(la),
+                r_num: Token::Integer(ra),
+            } => Ok(Token::Integer(mul!(la, ra))),
+            _ => Err(MathError::Impossible),
+        }
+    };
+    let commutative = Com::new(l_number, r_number)?;
+    match try_mul(commutative) {
+        Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            double!(commutative.l_num) * double!(commutative.r_num)
+        ))),
+        value => value,
+    }
+}
+
+pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
+    let try_div = |tup: (Token, Token)| -> Result<Token, MathError> {
+        // Check if zero.
+        if let (_, Token::Integer(0)) = tup {
+            return Err(MathError::DivisionByZero);
+        } else if let (_, Token::Double(a)) = tup {
+            if !a.is_normal() {
+                return Err(MathError::DivisionByZero);
+            }
+        }
+        match tup {
+            (Token::Integer(la), Token::Integer(ra)) => {
+                let mut res = Fraction {
+                    int: 0,
+                    num: la,
+                    den: ra,
+                };
+                return match res.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(res)),
+                };
+            }
+            (Token::Fraction(mut la), Token::Integer(ra)) => {
+                la.num = add!(la.num, mul!(la.int, la.den));
+                la.den = mul!(la.den, ra);
+                la.int = 0;
+                return match la.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la)),
+                };
+            }
+            (Token::Integer(la), Token::Fraction(mut ra)) => {
+                let old_num = ra.num;
+                ra.num = mul!(la, ra.den);
+                ra.den = add!(old_num, mul!(ra.den, ra.int));
+                ra.int = 0;
+                return match ra.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(ra.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(ra)),
+                };
+            }
+            (Token::Fraction(mut la), Token::Fraction(ra)) => {
+                return match la.div(&ra) {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la)),
+                }
+            }
+            (Token::Double(la), ra) => Ok(Token::Double(double_check!(la / double!(ra)))),
+            (la, Token::Double(ra)) => Ok(Token::Double(double_check!(double!(la) / ra))),
+            _ => Err(MathError::Impossible),
+        }
+    };
+    match try_div((l_number, r_number)) {
+        Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            double!(l_number) / double!(r_number)
         ))),
         value => value,
     }
