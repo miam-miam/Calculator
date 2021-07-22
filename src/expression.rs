@@ -1,13 +1,12 @@
 use itertools::Itertools;
 
 use crate::my_math::ten_to_the_power_of;
+use crate::number::{add, div, mul, sub};
 use crate::types::{Fraction, MathError, Token};
 
 pub struct Expression<'a> {
     string: &'a str,
     pub infix_token: Vec<Token>,
-    pub postfix_token: Vec<Token>,
-    result: Token,
 }
 
 impl<'a> Expression<'a> {
@@ -15,8 +14,6 @@ impl<'a> Expression<'a> {
         Expression {
             string,
             infix_token: vec![],
-            postfix_token: vec![],
-            result: Token::None,
         }
     }
     #[allow(clippy::manual_range_contains)]
@@ -150,8 +147,8 @@ impl<'a> Expression<'a> {
         }
         MathError::None
     }
-    pub fn postfix(&mut self) -> MathError {
-        self.postfix_token = vec![];
+    fn postfix(&mut self) -> Result<Vec<Token>, MathError> {
+        let mut postfix_token = vec![];
         let mut operator_stack = vec![];
         for token in self.infix_token.iter().copied() {
             match token {
@@ -159,7 +156,7 @@ impl<'a> Expression<'a> {
                 | Token::Fraction(_)
                 | Token::Power(_, _, _)
                 | Token::Double(_) => {
-                    self.postfix_token.push(token);
+                    postfix_token.push(token);
                 }
                 Token::Plus | Token::Minus | Token::Multiply | Token::Divide => {
                     while let Some(operator) = operator_stack.pop() {
@@ -167,7 +164,7 @@ impl<'a> Expression<'a> {
                             && precedence!(operator) >= precedence!(token)
                         {
                             //If implementing powers precedence cannot be equal as it is right associative and not left.
-                            self.postfix_token.push(operator);
+                            postfix_token.push(operator);
                         } else {
                             operator_stack.push(operator);
                             break;
@@ -185,24 +182,67 @@ impl<'a> Expression<'a> {
                             l_bracket_reached = true;
                             break;
                         }
-                        self.postfix_token.push(operator);
+                        postfix_token.push(operator);
                     }
                     if !l_bracket_reached {
-                        return MathError::UnmatchedBracket;
+                        return Err(MathError::UnmatchedBracket);
                     }
                 }
                 Token::None => {
-                    return MathError::UnknownOperator;
+                    return Err(MathError::UnknownOperator);
                 }
             }
         }
         while let Some(operator) = operator_stack.pop() {
             if let Token::LBracket | Token::RBracket = operator {
-                return MathError::UnmatchedBracket;
+                return Err(MathError::UnmatchedBracket);
             }
-            self.postfix_token.push(operator);
+            postfix_token.push(operator);
         }
-        MathError::None
+        Ok(postfix_token)
+    }
+
+    fn evaluate(&self, postfix_token: Vec<Token>) -> Result<Token, MathError> {
+        let mut result = vec![];
+        for token in postfix_token {
+            match token {
+                Token::Plus => match (result.pop(), result.pop()) {
+                    (Some(y), Some(x)) => result.push(add(x, y)?),
+                    _ => {
+                        return Err(MathError::Error);
+                    }
+                },
+                Token::Minus => match (result.pop(), result.pop()) {
+                    (Some(y), Some(x)) => result.push(sub(x, y)?),
+                    _ => {
+                        return Err(MathError::Error);
+                    }
+                },
+                Token::Multiply => match (result.pop(), result.pop()) {
+                    (Some(y), Some(x)) => result.push(mul(x, y)?),
+                    _ => {
+                        return Err(MathError::Error);
+                    }
+                },
+                Token::Divide => match (result.pop(), result.pop()) {
+                    (Some(y), Some(x)) => result.push(div(x, y)?),
+                    _ => {
+                        return Err(MathError::Error);
+                    }
+                },
+                Token::LBracket | Token::RBracket | Token::None => {}
+                tok => result.push(tok),
+            }
+        }
+        return match result.pop() {
+            None => Err(MathError::Error),
+            Some(res) => Ok(res),
+        };
+    }
+
+    pub fn calculate(&mut self) -> Result<Token, MathError> {
+        let res = self.postfix()?;
+        self.evaluate(res)
     }
 }
 

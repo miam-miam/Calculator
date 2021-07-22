@@ -10,7 +10,11 @@ fn main() {
         let str_expression = string_expression.trim_end_matches(is_newline);
         let mut expr = Expression::new(&str_expression);
         println!("{} With tokens: {:?}", expr.tokenise(), expr.infix_token);
-        println!("{} With tokens: {:?}", expr.postfix(), expr.postfix_token);
+        let res = expr.calculate();
+        match res {
+            Err(e) => println!("Got Error: {}", e),
+            Ok(t) => println!("Got Result: {:?}", t),
+        }
     }
 }
 

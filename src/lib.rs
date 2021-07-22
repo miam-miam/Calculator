@@ -9,6 +9,7 @@ pub mod types;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expression::Expression;
     use crate::types::MathError;
 
     #[test]
@@ -48,49 +49,6 @@ mod tests {
                 types::Token::Integer(56),
                 types::Token::Plus,
                 types::Token::Integer(9)
-            ]
-        );
-    }
-
-    #[test]
-    fn postfix() {
-        let mut expr = expression::Expression::new("6*(4+5)-25/(2+3)");
-        assert_eq!(expr.tokenise(), types::MathError::None);
-        assert_eq!(
-            expr.infix_token,
-            vec![
-                types::Token::Integer(6),
-                types::Token::Multiply,
-                types::Token::LBracket,
-                types::Token::Integer(4),
-                types::Token::Plus,
-                types::Token::Integer(5),
-                types::Token::RBracket,
-                types::Token::Minus,
-                types::Token::Integer(25),
-                types::Token::Divide,
-                types::Token::LBracket,
-                types::Token::Integer(2),
-                types::Token::Plus,
-                types::Token::Integer(3),
-                types::Token::RBracket,
-            ]
-        );
-        assert_eq!(expr.postfix(), types::MathError::None);
-        assert_eq!(
-            expr.postfix_token,
-            vec![
-                types::Token::Integer(6),
-                types::Token::Integer(4),
-                types::Token::Integer(5),
-                types::Token::Plus,
-                types::Token::Multiply,
-                types::Token::Integer(25),
-                types::Token::Integer(2),
-                types::Token::Integer(3),
-                types::Token::Plus,
-                types::Token::Divide,
-                types::Token::Minus,
             ]
         );
     }
@@ -230,6 +188,31 @@ mod tests {
         assert_eq!(
             Err(MathError::DivisionByZero),
             number::div(expr.infix_token[20], expr.infix_token[22])
+        );
+    }
+
+    #[test]
+    fn evaluate() {
+        let mut expr = Expression::new("9.856/8.7+9*(5.1+0.1)");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            expr.calculate(),
+            Ok(types::Token::Fraction(types::Fraction::new(47, 2029, 2175)))
+        );
+        let mut expr = Expression::new("(8/((5-5)/(9.1*4)))");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(expr.calculate(), Err(types::MathError::DivisionByZero));
+        let mut expr = Expression::new("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            expr.calculate(),
+            Ok(types::Token::Double(9.642397660818713_f64))
+        );
+        let mut expr = Expression::new("5/1+5.1/2+5.1/9.5+5/9+8.4/7");
+        assert_eq!(expr.tokenise(), types::MathError::None);
+        assert_eq!(
+            expr.calculate(),
+            Ok(types::Token::Fraction(types::Fraction::new(9, 2881, 3420)))
         );
     }
 }
