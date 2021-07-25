@@ -1,3 +1,4 @@
+use crate::my_math::factorise;
 use crate::types::{CRoot, Fraction, MathError, SRoot, Token};
 
 #[derive(Copy, Clone)]
@@ -243,6 +244,7 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 return Err(MathError::ExponentiationError);
             }
         }
+
         match tup {
             (Token::Integer(la), Token::Integer(ra)) => {
                 if ra < 0 {
@@ -304,28 +306,57 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 println!("{}, {}", la, ra);
                 return if ra.den == 2 || ra.den == 3 {
                     if ra.num < 0 && ra.int < 0 {
-                        // if -real_num > u32::MAX as i128 {
-                        //     Err(MathError::Overflow)
-                        // } else {
-                        //
-                        // }
-                        // TODO Surd-ify.
-                        Err(MathError::Impossible)
+                        if -ra.int > u32::MAX as i128 && -ra.num > u32::MAX as i128 {
+                            return Err(MathError::Overflow);
+                        }
+                        match la.checked_pow(-ra.int as u32) {
+                            None => Err(MathError::Overflow),
+                            Some(outside_root) => match la.checked_pow(-ra.num as u32) {
+                                None => Err(MathError::Overflow),
+                                Some(inside_root) => {
+                                    let mut res = Fraction::new(0, inside_root, 0); //TODO
+                                    if ra.den == 3 {
+                                        Ok(Token::CFracRoot(CRoot::new(
+                                            Fraction::new(0, 1, outside_root),
+                                            inside_root,
+                                        )))
+                                    } else {
+                                        Ok(Token::SFracRoot(SRoot::new(
+                                            Fraction::new(0, 1, outside_root),
+                                            inside_root,
+                                        )))
+                                    }
+                                }
+                            },
+                        }
                     } else {
+                        let res = factorise(la, ra.den == 2);
                         if ra.int > u32::MAX as i128 && ra.num > u32::MAX as i128 {
                             return Err(MathError::Overflow);
                         }
                         match la.checked_pow(ra.int as u32) {
                             None => Err(MathError::Overflow),
-                            Some(outside_root) => match la.checked_pow(ra.num as u32) {
+                            Some(outside_root) => match res.inside.checked_pow(ra.num as u32) {
                                 None => Err(MathError::Overflow),
-                                Some(inside_root) => {
-                                    if ra.den == 3 {
-                                        Ok(Token::CIntRoot(CRoot::new(outside_root, inside_root)))
-                                    } else {
-                                        Ok(Token::SIntRoot(SRoot::new(outside_root, inside_root)))
+                                Some(inside_root) => match res.outside.checked_pow(ra.num as u32) {
+                                    None => Err(MathError::Overflow),
+                                    Some(outside) => {
+                                        if inside_root == 1 {
+                                            return Ok(Token::Integer(mul!(outside_root, outside)));
+                                        }
+                                        if ra.den == 3 {
+                                            Ok(Token::CIntRoot(CRoot::new(
+                                                mul!(outside_root, outside),
+                                                inside_root,
+                                            )))
+                                        } else {
+                                            Ok(Token::SIntRoot(SRoot::new(
+                                                mul!(outside_root, outside),
+                                                inside_root,
+                                            )))
+                                        }
                                     }
-                                }
+                                },
                             },
                         }
                     }

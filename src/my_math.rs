@@ -25,7 +25,12 @@ pub fn ten_to_the_power_of(exponent: i128) -> Option<i128> {
     Some(count)
 }
 
-pub fn factorise(base: i128, sqrt: bool) -> (i128, i128) {
+pub struct FactoriseResult {
+    pub outside: i128,
+    pub inside: i128,
+}
+
+pub fn factorise(base: i128, sqrt: bool) -> FactoriseResult {
     let mut outside_root = 1_i128;
     let mut inside_root = base;
     let mut upper_bound = (match sqrt {
@@ -92,5 +97,8 @@ pub fn factorise(base: i128, sqrt: bool) -> (i128, i128) {
         }
         ii += 1;
     }
-    (outside_root, inside_root)
+    FactoriseResult {
+        outside: outside_root,
+        inside: inside_root,
+    }
 }
