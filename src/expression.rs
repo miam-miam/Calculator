@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::my_math::ten_to_the_power_of;
-use crate::number::{add, div, mul, sub};
+use crate::number::{add, div, exp, mul, sub};
 use crate::types::{Fraction, MathError, Token};
 
 pub struct Expression<'a> {
@@ -23,10 +23,13 @@ impl<'a> Expression<'a> {
         let mut checking_number = false;
         let mut new_string: String = String::new();
         for (idx, (elem, next)) in self.string.chars().chain([' ']).tuple_windows().enumerate() {
-            if !checking_number && '0' <= elem && elem <= '9' {
+            if !checking_number && (('0' <= elem && elem <= '9') || elem == '.') {
                 checking_number = true;
                 decimal_point_index = None;
                 new_string = String::new();
+                if elem == '.' {
+                    new_string.push('0');
+                }
             } // Not using else if as checking number can change inside previous if statement.
             if checking_number {
                 if elem == '.' {
@@ -137,6 +140,7 @@ impl<'a> Expression<'a> {
                     '-' => Token::Minus,
                     '*' => Token::Multiply,
                     '/' => Token::Divide,
+                    '^' => Token::Exponentiation,
                     '(' => Token::LBracket,
                     ')' => Token::RBracket,
                     _ => {
@@ -154,16 +158,32 @@ impl<'a> Expression<'a> {
             match token {
                 Token::Integer(_)
                 | Token::Fraction(_)
-                | Token::Power(_, _, _)
+                | Token::SIntRoot(_)
+                | Token::SFracRoot(_)
+                | Token::CIntRoot(_)
+                | Token::CFracRoot(_)
                 | Token::Double(_) => {
                     postfix_token.push(token);
                 }
+                // Left associative
                 Token::Plus | Token::Minus | Token::Multiply | Token::Divide => {
                     while let Some(operator) = operator_stack.pop() {
                         if operator != Token::LBracket
                             && precedence!(operator) >= precedence!(token)
                         {
-                            //If implementing powers precedence cannot be equal as it is right associative and not left.
+                            postfix_token.push(operator);
+                        } else {
+                            operator_stack.push(operator);
+                            break;
+                        }
+                    }
+                    operator_stack.push(token);
+                }
+                // Right associative
+                Token::Exponentiation => {
+                    while let Some(operator) = operator_stack.pop() {
+                        if operator != Token::LBracket && precedence!(operator) > precedence!(token)
+                        {
                             postfix_token.push(operator);
                         } else {
                             operator_stack.push(operator);
@@ -226,6 +246,12 @@ impl<'a> Expression<'a> {
                 },
                 Token::Divide => match (result.pop(), result.pop()) {
                     (Some(y), Some(x)) => result.push(div(x, y)?),
+                    _ => {
+                        return Err(MathError::Error);
+                    }
+                },
+                Token::Exponentiation => match (result.pop(), result.pop()) {
+                    (Some(y), Some(x)) => result.push(exp(x, y)?),
                     _ => {
                         return Err(MathError::Error);
                     }

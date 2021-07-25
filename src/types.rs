@@ -6,13 +6,17 @@ use gcd::Gcd;
 pub enum Token {
     Integer(i128),
     Fraction(Fraction),
-    Power(Fraction, SimpleFraction, SimpleFraction),
+    SIntRoot(SRoot<i128>),
+    SFracRoot(SRoot<Fraction>),
+    CIntRoot(CRoot<i128>),
+    CFracRoot(CRoot<Fraction>),
     Double(f64),
     None,
     Plus,
     Minus,
     Multiply,
     Divide,
+    Exponentiation,
     LBracket,
     RBracket,
 }
@@ -22,13 +26,17 @@ impl fmt::Debug for Token {
         match self {
             Token::Integer(i) => write!(f, "Integer: {}", i),
             Token::Fraction(fr) => write!(f, "Fraction: {}", fr),
-            Token::Power(m, b, e) => write!(f, "Power: {}*({})^({})", m, b, e),
+            Token::SIntRoot(r) => write!(f, "Sqrt: {}", r),
+            Token::SFracRoot(r) => write!(f, "Sqrt: {}", r),
+            Token::CIntRoot(r) => write!(f, "Cbrt: {}", r),
+            Token::CFracRoot(r) => write!(f, "Cbrt: {}", r),
             Token::Double(d) => write!(f, "Double: {}", d),
             Token::None => write!(f, "None"),
             Token::Plus => write!(f, "Plus"),
             Token::Minus => write!(f, "Minus"),
             Token::Multiply => write!(f, "Multiply"),
             Token::Divide => write!(f, "Divide"),
+            Token::Exponentiation => write!(f, "Exponentiation"),
             Token::LBracket => write!(f, "LBracket"),
             Token::RBracket => write!(f, "RBracket"),
         }
@@ -45,7 +53,7 @@ pub enum MathError {
     DivisionByZero,
     ComplexNumber,
     // For 0^0
-    PowerError,
+    ExponentiationError,
     InvalidDecimalPoint,
     Error,
     // Using Fraction to store int
@@ -63,7 +71,7 @@ impl fmt::Display for MathError {
             MathError::DoubleOverflow => write!(f, "Proper Overflow"),
             MathError::DivisionByZero => write!(f, "Division by zero"),
             MathError::ComplexNumber => write!(f, "Complex numbers not implemented"),
-            MathError::PowerError => write!(f, "Cannot compute 0^0"),
+            MathError::ExponentiationError => write!(f, "Cannot compute 0^0"),
             MathError::InvalidDecimalPoint => write!(f, "Invalid decimal point"),
             MathError::InvalidFraction => write!(f, "Fraction should be integer"),
             MathError::Error => write!(f, "A general error happened"),
@@ -81,7 +89,11 @@ pub struct Fraction {
 
 impl fmt::Display for Fraction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}+{}/{}", self.int, self.num, self.den)
+        if self.num < 0 {
+            write!(f, "{}{}/{}", self.int, self.num, self.den)
+        } else {
+            write!(f, "{}+{}/{}", self.int, self.num, self.den)
+        }
     }
 }
 
@@ -155,12 +167,12 @@ impl Fraction {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct SimpleFraction {
-    pub num: i128,
-    pub den: i128,
+    pub num: i32,
+    pub den: i32,
 }
 
 impl SimpleFraction {
-    pub fn new(num: i128, den: i128) -> SimpleFraction {
+    pub fn new(num: i32, den: i32) -> SimpleFraction {
         SimpleFraction { num, den }
     }
 }
@@ -168,5 +180,41 @@ impl SimpleFraction {
 impl fmt::Display for SimpleFraction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}/{}", self.num, self.den)
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct SRoot<T> {
+    pub mul: T,
+    pub base: i128,
+}
+
+impl<T> SRoot<T> {
+    pub fn new(mul: T, base: i128) -> SRoot<T> {
+        SRoot { mul, base }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for SRoot<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({})*√{}", self.mul, self.base)
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct CRoot<T> {
+    pub mul: T,
+    pub base: i128,
+}
+
+impl<T> CRoot<T> {
+    pub fn new(mul: T, base: i128) -> CRoot<T> {
+        CRoot { mul, base }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for CRoot<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({})*∛{}", self.mul, self.base)
     }
 }

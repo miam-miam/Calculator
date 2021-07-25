@@ -27,12 +27,12 @@ macro_rules! double {
     {$token:expr} => (match $token {
             Token::Integer(i) => i as f64,
             Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
-            Token::Power(i, b, e) => {
-                double_check!((i.int as f64 + i.num as f64 / i.den as f64)
-                    * (b.den as f64 / b.num as f64).powf(e.den as f64 / e.num as f64))
+            Token::SIntRoot(i) => double_check!((i.mul as f64) * (i.base as f64).sqrt()),
+            Token::SFracRoot(i) => {
+                double_check!((i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64)
+                    * (i.base as f64).sqrt())
             }
             Token::Double(i) => i,
             _ => return Err(MathError::Impossible),
         })
 }
-// Ensure secure double add

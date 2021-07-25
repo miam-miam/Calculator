@@ -9,8 +9,6 @@ pub mod types;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::Expression;
-    use crate::types::MathError;
 
     #[test]
     fn tokenise() {
@@ -186,29 +184,29 @@ mod tests {
             number::div(expr.infix_token[16], expr.infix_token[18])
         );
         assert_eq!(
-            Err(MathError::DivisionByZero),
+            Err(types::MathError::DivisionByZero),
             number::div(expr.infix_token[20], expr.infix_token[22])
         );
     }
 
     #[test]
     fn evaluate() {
-        let mut expr = Expression::new("9.856/8.7+9*(5.1+0.1)");
+        let mut expr = expression::Expression::new("9.856/8.7+9*(5.1+0.1)");
         assert_eq!(expr.tokenise(), types::MathError::None);
         assert_eq!(
             expr.calculate(),
             Ok(types::Token::Fraction(types::Fraction::new(47, 2029, 2175)))
         );
-        let mut expr = Expression::new("(8/((5-5)/(9.1*4)))");
+        let mut expr = expression::Expression::new("(8/((5-5)/(9.1*4)))");
         assert_eq!(expr.tokenise(), types::MathError::None);
         assert_eq!(expr.calculate(), Err(types::MathError::DivisionByZero));
-        let mut expr = Expression::new("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
+        let mut expr = expression::Expression::new("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(expr.tokenise(), types::MathError::None);
         assert_eq!(
             expr.calculate(),
             Ok(types::Token::Double(9.642397660818713_f64))
         );
-        let mut expr = Expression::new("5/1+5.1/2+5.1/9.5+5/9+8.4/7");
+        let mut expr = expression::Expression::new("5/1+5.1/2+5.1/9.5+5/9+8.4/7");
         assert_eq!(expr.tokenise(), types::MathError::None);
         assert_eq!(
             expr.calculate(),
