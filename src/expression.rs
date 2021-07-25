@@ -16,6 +16,22 @@ impl<'a> Expression<'a> {
             infix_token: vec![],
         }
     }
+
+    #[inline]
+    fn check_if_last_token_was_op(&self) -> bool {
+        match self.infix_token.last() {
+            Some(
+                Token::Integer(..)
+                | Token::Fraction(..)
+                | Token::SIntRoot(..)
+                | Token::SFracRoot(..)
+                | Token::CIntRoot(..)
+                | Token::CFracRoot(..)
+                | Token::Double(..),
+            ) => false,
+            _ => true,
+        }
+    }
     #[allow(clippy::manual_range_contains)]
     pub fn tokenise(&mut self) -> MathError {
         let string_char_len = self.string.chars().count();
@@ -23,10 +39,17 @@ impl<'a> Expression<'a> {
         let mut checking_number = false;
         let mut new_string: String = String::new();
         for (idx, (elem, next)) in self.string.chars().chain([' ']).tuple_windows().enumerate() {
-            if !checking_number && (('0' <= elem && elem <= '9') || elem == '.') {
+            if !checking_number
+                && (('0' <= elem && elem <= '9')
+                    || elem == '.'
+                    || ((elem == '-' || elem == '+') && self.check_if_last_token_was_op()))
+            {
                 checking_number = true;
                 decimal_point_index = None;
                 new_string = String::new();
+                if elem == '-' {
+                    new_string.push('-')
+                }
                 if elem == '.' {
                     new_string.push('0');
                 }
