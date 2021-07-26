@@ -103,7 +103,7 @@ impl Fraction {
     }
 
     pub fn normalise(&mut self) -> Result<(), MathError> {
-        // At the end den must be positive
+        // At the end den must be positive and int must have the same sign as num
         if self.den == 0 {
             return Err(MathError::DivisionByZero);
         }
@@ -127,6 +127,15 @@ impl Fraction {
         let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
         self.num /= gcd;
         self.den /= gcd;
+
+        // If different sign
+        if self.num < 0 && self.int > 0 {
+            self.num += self.den;
+            self.int -= 1;
+        } else if self.num > 0 && self.int < 0 {
+            self.num -= self.den;
+            self.int += 1;
+        }
         Ok(())
     }
 
