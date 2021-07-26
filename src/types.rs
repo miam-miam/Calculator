@@ -116,7 +116,7 @@ impl Fraction {
             self.num = 0;
             return Err(MathError::InvalidFraction);
         }
-        if self.num >= self.den {
+        if (self.num > 0 && self.num >= self.den) || (self.num < 0 && -self.num >= self.den) {
             self.int = add!(self.int, self.num / self.den);
             self.num -= (self.num / self.den) * self.den;
         }
