@@ -19,18 +19,18 @@ impl<'a> Expression<'a> {
 
     #[inline]
     fn check_if_last_token_was_op(&self) -> bool {
-        match self.infix_token.last() {
+        !matches!(
+            self.infix_token.last(),
             Some(
                 Token::Integer(..)
-                | Token::Fraction(..)
-                | Token::SIntRoot(..)
-                | Token::SFracRoot(..)
-                | Token::CIntRoot(..)
-                | Token::CFracRoot(..)
-                | Token::Double(..),
-            ) => false,
-            _ => true,
-        }
+                    | Token::Fraction(..)
+                    | Token::SIntRoot(..)
+                    | Token::SFracRoot(..)
+                    | Token::CIntRoot(..)
+                    | Token::CFracRoot(..)
+                    | Token::Double(..)
+            )
+        )
     }
     #[allow(clippy::manual_range_contains)]
     pub fn tokenise(&mut self) -> MathError {
@@ -283,10 +283,10 @@ impl<'a> Expression<'a> {
                 tok => result.push(tok),
             }
         }
-        return match result.pop() {
+        match result.pop() {
             None => Err(MathError::Error),
             Some(res) => Ok(res),
-        };
+        }
     }
 
     pub fn calculate(&mut self) -> Result<Token, MathError> {
