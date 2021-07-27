@@ -277,59 +277,138 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 };
             }
             (Token::Integer(la), Token::Fraction(mut ra)) => {
-                return if ra.den == 2 || ra.den == 3 {
-                    let negative = ra.num < 0 || ra.int < 0;
-                    ra.num = ra.num.abs();
-                    ra.int = ra.int.abs();
-                    let res = factorise(la, ra.den == 2);
-                    if ra.int > u32::MAX as i128 && ra.num > u32::MAX as i128 {
-                        return Err(MathError::Overflow);
-                    }
-                    let outside_root = none_to_err!(la.checked_pow(ra.int as u32));
-                    let inside_root = none_to_err!(res.inside.checked_pow(ra.num as u32));
-                    let outside = none_to_err!(res.outside.checked_pow(ra.num as u32));
-                    if inside_root == 1 {
-                        return match negative {
-                            true => Ok(Token::Fraction(Fraction::new(
-                                0,
-                                1,
-                                mul!(outside_root, outside),
-                            ))),
-                            false => Ok(Token::Integer(mul!(outside_root, outside))),
-                        };
-                    }
-                    if ra.den == 3 {
-                        match negative {
-                            false => Ok(Token::CIntRoot(CRoot::new(
-                                mul!(outside_root, outside),
-                                inside_root,
-                            ))),
-                            true => match inside_root.checked_pow(2) {
-                                None => Err(MathError::Overflow),
-                                Some(sq_inside_root) => Ok(Token::CFracRoot(CRoot::new(
-                                    Fraction::new(
-                                        0,
-                                        1,
-                                        mul!(mul!(outside_root, outside), inside_root),
-                                    ),
-                                    sq_inside_root,
-                                ))),
-                            },
-                        }
-                    } else {
-                        match negative {
-                            false => Ok(Token::SIntRoot(SRoot::new(
-                                mul!(outside_root, outside),
-                                inside_root,
-                            ))),
-                            true => Ok(Token::SFracRoot(SRoot::new(
+                if ra.den != 2 && ra.den != 3 {
+                    return Err(MathError::Overflow);
+                }
+                let negative = ra.num < 0 || ra.int < 0;
+                ra.num = ra.num.abs();
+                ra.int = ra.int.abs();
+                if ra.int > u32::MAX as i128 && ra.num > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+                let res = factorise(la, ra.den == 2);
+                let outside_root = none_to_err!(la.checked_pow(ra.int as u32));
+                let inside_root = none_to_err!(res.inside.checked_pow(ra.num as u32));
+                let outside = none_to_err!(res.outside.checked_pow(ra.num as u32));
+                if inside_root == 1 {
+                    return match negative {
+                        true => Ok(Token::Fraction(Fraction::new(
+                            0,
+                            1,
+                            mul!(outside_root, outside),
+                        ))),
+                        false => Ok(Token::Integer(mul!(outside_root, outside))),
+                    };
+                }
+                if ra.den == 3 {
+                    match negative {
+                        false => Ok(Token::CIntRoot(CRoot::new(
+                            mul!(outside_root, outside),
+                            inside_root,
+                        ))),
+                        true => match inside_root.checked_pow(2) {
+                            None => Err(MathError::Overflow),
+                            Some(sq_inside_root) => Ok(Token::CFracRoot(CRoot::new(
                                 Fraction::new(0, 1, mul!(mul!(outside_root, outside), inside_root)),
-                                inside_root,
+                                sq_inside_root,
                             ))),
-                        }
+                        },
                     }
                 } else {
-                    Err(MathError::Overflow)
+                    match negative {
+                        false => Ok(Token::SIntRoot(SRoot::new(
+                            mul!(outside_root, outside),
+                            inside_root,
+                        ))),
+                        true => Ok(Token::SFracRoot(SRoot::new(
+                            Fraction::new(0, 1, mul!(mul!(outside_root, outside), inside_root)),
+                            inside_root,
+                        ))),
+                    }
+                }
+            }
+            (Token::Fraction(la), Token::Fraction(mut ra)) => {
+                if ra.den != 2 && ra.den != 3 {
+                    return Err(MathError::Overflow);
+                }
+                let negative = ra.num < 0 || ra.int < 0;
+                ra.num = ra.num.abs();
+                ra.int = ra.int.abs();
+                if ra.int > u32::MAX as i128 && ra.num > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+
+                let num = add!(mul!(la.int, la.den), la.num);
+
+                let mut res_num = factorise(num, ra.den == 2);
+                let mut res_den = factorise(la.den, ra.den == 2);
+                let mut outside_root_num = none_to_err!(num.checked_pow(ra.int as u32));
+                let mut inside_root_num = none_to_err!(res_num.inside.checked_pow(ra.num as u32));
+                let mut outside_num = none_to_err!(res_num.outside.checked_pow(ra.num as u32));
+                let mut outside_root_den = none_to_err!(la.den.checked_pow(ra.int as u32));
+                let mut inside_root_den = none_to_err!(res_den.inside.checked_pow(ra.num as u32));
+                let mut outside_den = none_to_err!(res_den.outside.checked_pow(ra.num as u32));
+
+                // Swap den to num and num to den.
+                if negative {
+                    std::mem::swap(&mut res_num, &mut res_den);
+                    std::mem::swap(&mut outside_root_num, &mut outside_root_den);
+                    std::mem::swap(&mut inside_root_num, &mut inside_root_den);
+                    std::mem::swap(&mut outside_num, &mut outside_den);
+                }
+
+                if inside_root_num == 1 && inside_root_den == 1 {
+                    let mut res = Fraction::new(
+                        0,
+                        mul!(outside_root_num, outside_num),
+                        mul!(outside_root_den, outside_den),
+                    );
+                    return match res.normalise() {
+                        Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                        Err(x) => Err(x),
+                        _ => Ok(Token::Fraction(res)),
+                    };
+                }
+                return if ra.den == 3 {
+                    let mut res = Fraction::new(
+                        0,
+                        mul!(outside_root_num, outside_num),
+                        mul!(mul!(outside_root_den, outside_den), inside_root_den),
+                    );
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => Ok(Token::CIntRoot(CRoot::new(
+                            res.int,
+                            mul!(
+                                inside_root_num,
+                                none_to_err!(inside_root_den.checked_pow(2))
+                            ),
+                        ))),
+                        Err(x) => Err(x),
+                        _ => Ok(Token::CFracRoot(CRoot::new(
+                            res,
+                            mul!(
+                                inside_root_num,
+                                none_to_err!(inside_root_den.checked_pow(2))
+                            ),
+                        ))),
+                    }
+                } else {
+                    let mut res = Fraction::new(
+                        0,
+                        mul!(outside_root_num, outside_num),
+                        mul!(mul!(outside_root_den, outside_den), inside_root_den),
+                    );
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => Ok(Token::SIntRoot(SRoot::new(
+                            res.int,
+                            mul!(inside_root_num, inside_root_den),
+                        ))),
+                        Err(x) => Err(x),
+                        _ => Ok(Token::SFracRoot(SRoot::new(
+                            res,
+                            mul!(inside_root_num, inside_root_den),
+                        ))),
+                    }
                 };
             }
             (Token::Double(la), ra) => Ok(Token::Double(double_check!(la.powf(double!(ra))))),
