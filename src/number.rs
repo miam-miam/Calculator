@@ -245,6 +245,15 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             }
         }
 
+        // Check if x^0, 0^x or 1^x
+        if let (Token::Integer(1), _) | (_, Token::Integer(0)) = tup {
+            return Ok(Token::Integer(1));
+        } else if let (Token::Integer(0), _) = tup {
+            return Ok(Token::Integer(0));
+        } else if let (x, Token::Integer(1)) = tup {
+            return Ok(x);
+        }
+
         match tup {
             (Token::Integer(la), Token::Integer(mut ra)) => {
                 let negative = ra < 0;
@@ -411,9 +420,127 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                     }
                 };
             }
-            (Token::Double(la), ra) => Ok(Token::Double(double_check!(la.powf(double!(ra))))),
-            (la, Token::Double(ra)) => Ok(Token::Double(double_check!((double!(la)).powf(ra)))),
-            _ => Err(MathError::Impossible),
+
+            (Token::SIntRoot(la), Token::Integer(mut ra)) => {
+                let negative = ra < 0;
+                ra = ra.abs();
+                if ra > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+                let mul = mul!(
+                    none_to_err!(la.mul.checked_pow(ra as u32)),
+                    none_to_err!(la.base.checked_pow(ra as u32 / 2))
+                );
+                return if ra % 2 == 0 {
+                    match negative {
+                        true => Ok(Token::Fraction(Fraction::new(0, 1, mul))),
+                        false => Ok(Token::Integer(mul)),
+                    }
+                } else {
+                    match negative {
+                        true => Ok(Token::SFracRoot(SRoot::new(
+                            Fraction::new(0, 1, mul),
+                            la.base,
+                        ))),
+                        false => Ok(Token::SIntRoot(SRoot::new(mul, la.base))),
+                    }
+                };
+            }
+
+            (Token::CIntRoot(la), Token::Integer(mut ra)) => {
+                let negative = ra < 0;
+                ra = ra.abs();
+                if ra > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+                let mul = mul!(
+                    none_to_err!(la.mul.checked_pow(ra as u32)),
+                    none_to_err!(la.base.checked_pow(ra as u32 / 3))
+                );
+                return if ra % 3 == 0 {
+                    match negative {
+                        true => Ok(Token::Fraction(Fraction::new(0, 1, mul))),
+                        false => Ok(Token::Integer(mul)),
+                    }
+                } else {
+                    let base = none_to_err!(la.base.checked_pow((ra % 3) as u32));
+                    match negative {
+                        true => Ok(Token::CFracRoot(CRoot::new(Fraction::new(0, 1, mul), base))),
+                        false => Ok(Token::CIntRoot(CRoot::new(mul, base))),
+                    }
+                };
+            }
+
+            (Token::SFracRoot(la), Token::Integer(mut ra)) => {
+                let negative = ra < 0;
+                ra = ra.abs();
+                if ra > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+                let num = la.mul.int * la.mul.den + la.mul.num;
+                let mul_num = mul!(
+                    none_to_err!(num.checked_pow(ra as u32)),
+                    none_to_err!(la.base.checked_pow(ra as u32 / 2))
+                );
+                let mul_den = none_to_err!(la.mul.den.checked_pow(ra as u32));
+
+                let mut res = match negative {
+                    true => Fraction::new(0, mul_den, mul_num),
+                    false => Fraction::new(0, mul_den, mul_num),
+                };
+
+                return if ra % 2 == 0 {
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                        Err(x) => Err(x),
+                        _ => Ok(Token::Fraction(res)),
+                    }
+                } else {
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => {
+                            Ok(Token::CIntRoot(CRoot::new(res.int, la.base)))
+                        }
+                        Err(x) => Err(x),
+                        _ => Ok(Token::CFracRoot(CRoot::new(res, la.base))),
+                    }
+                };
+            }
+            (Token::CFracRoot(la), Token::Integer(mut ra)) => {
+                let negative = ra < 0;
+                ra = ra.abs();
+                if ra > u32::MAX as i128 {
+                    return Err(MathError::Overflow);
+                }
+                let num = la.mul.int * la.mul.den + la.mul.num;
+                let mul_num = mul!(
+                    none_to_err!(num.checked_pow(ra as u32)),
+                    none_to_err!(la.base.checked_pow(ra as u32 / 3))
+                );
+                let mul_den = none_to_err!(la.mul.den.checked_pow(ra as u32));
+
+                let mut res = match negative {
+                    true => Fraction::new(0, mul_den, mul_num),
+                    false => Fraction::new(0, mul_den, mul_num),
+                };
+
+                return if ra % 3 == 0 {
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                        Err(x) => Err(x),
+                        _ => Ok(Token::Fraction(res)),
+                    }
+                } else {
+                    let base = none_to_err!(la.base.checked_pow((ra % 3) as u32));
+                    match res.normalise() {
+                        Err(MathError::InvalidFraction) => {
+                            Ok(Token::CIntRoot(CRoot::new(res.int, base)))
+                        }
+                        Err(x) => Err(x),
+                        _ => Ok(Token::CFracRoot(CRoot::new(res, base))),
+                    }
+                };
+            }
+            (la, ra) => Ok(Token::Double(double_check!(double!(la).powf(double!(ra))))),
         }
     };
     match try_exp((l_number, r_number)) {

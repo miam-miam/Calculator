@@ -10,10 +10,6 @@ macro_rules! sub {
     {$lhs:expr, $rhs:expr} => (match $lhs.checked_sub($rhs) {Some(i) => i, None => {return Err(MathError::Overflow);}});
     {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_sub($rhs) {Some(i) => i, None => {return Err($error);}});
     }
-macro_rules! div {
-    {$lhs:expr, $rhs:expr} => (match $lhs.checked_div($rhs) {Some(i) => i, None => {return Err(MathError::Overflow);}});
-    {$lhs:expr, $rhs:expr, $error:expr} => (match $lhs.checked_div($rhs) {Some(i) => i, None => {return Err($error);}});
-    }
 macro_rules! precedence {
     {$token:expr} => (match $token { Token::Plus | Token::Minus => {2}, Token::Multiply | Token::Divide => {3}, _ => {0}});
     }
@@ -35,7 +31,12 @@ macro_rules! double {
             Token::SIntRoot(i) => double_check!((i.mul as f64) * (i.base as f64).sqrt()),
             Token::SFracRoot(i) => {
                 double_check!((i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64)
-                    * (i.base as f64).sqrt())
+                    * (i.base as f64).cbrt())
+            }
+            Token::CIntRoot(i) => double_check!((i.mul as f64) * (i.base as f64).sqrt()),
+            Token::CFracRoot(i) => {
+                double_check!((i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64)
+                    * (i.base as f64).cbrt())
             }
             Token::Double(i) => i,
             _ => return Err(MathError::Impossible),

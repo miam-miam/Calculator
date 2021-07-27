@@ -1,6 +1,5 @@
 use std::cmp::min;
 
-const MAX_I128_LOG_2: i128 = 127;
 const MAX_I128_LOG_10: i128 = 38;
 
 const SMALL_PRIMES: [i128; 110] = [
