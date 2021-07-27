@@ -34,8 +34,7 @@ mod tests {
                 }),
                 types::Token::Plus,
                 types::Token::LBracket,
-                types::Token::Minus,
-                types::Token::Integer(9),
+                types::Token::Integer(-9),
                 types::Token::RBracket,
             ]
         );
