@@ -16,4 +16,4 @@ fn main() {
     eframe::run_native(Box::new(app), native_options);
 }
 
-//TODO Change fraction ops to use gcd before adding everything together.
+//TODO Change fraction ops to use gcd before adding everything together. + Check why (5^1/3)+2^1/3 is not correct. + Do Power division

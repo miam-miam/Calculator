@@ -22,6 +22,7 @@ impl Expression {
                     | Token::CIntRoot(..)
                     | Token::CFracRoot(..)
                     | Token::Double(..)
+                    | Token::RBracket
             )
         )
     }

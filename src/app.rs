@@ -89,7 +89,7 @@ impl epi::App for CalcApp {
     }
 
     fn name(&self) -> &str {
-        "egui template"
+        "Calculator"
     }
 
     fn clear_color(&self) -> Rgba {

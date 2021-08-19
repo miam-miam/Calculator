@@ -14,6 +14,42 @@ pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             Ok(Token::Fraction(la))
         }
         (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(add!(la, ra))),
+        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+            la.mul = add!(la.mul, ra.mul);
+            Ok(Token::SIntRoot(la))
+        }
+        (Token::SFracRoot(mut la), Token::SIntRoot(ra))
+        | (Token::SIntRoot(ra), Token::SFracRoot(mut la))
+            if la.base == ra.base =>
+        {
+            la.mul.int = add!(la.mul.int, ra.mul);
+            Ok(Token::SFracRoot(la))
+        }
+        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) if la.base == ra.base => {
+            match la.mul.add(&ra.mul) {
+                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(x) => Err(x),
+                _ => Ok(Token::SFracRoot(la)),
+            }
+        }
+        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+            la.mul = add!(la.mul, ra.mul);
+            Ok(Token::CIntRoot(la))
+        }
+        (Token::CFracRoot(mut la), Token::CIntRoot(ra))
+        | (Token::CIntRoot(ra), Token::CFracRoot(mut la))
+            if la.base == ra.base =>
+        {
+            la.mul.int = add!(la.mul.int, ra.mul);
+            Ok(Token::CFracRoot(la))
+        }
+        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) if la.base == ra.base => {
+            match la.mul.add(&ra.mul) {
+                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(x) => Err(x),
+                _ => Ok(Token::CFracRoot(la)),
+            }
+        }
         (la, ra) => Ok(Token::Double(double_check!(double!(la) + double!(ra)))),
     };
     match try_add((l_number, r_number)) {
@@ -41,6 +77,46 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             Err(x) => Err(x),
             _ => Ok(Token::Fraction(la)),
         },
+        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+            la.mul = sub!(la.mul, ra.mul);
+            Ok(Token::SIntRoot(la))
+        }
+        (Token::SFracRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+            la.mul.int = sub!(la.mul.int, ra.mul);
+            Ok(Token::SFracRoot(la))
+        }
+        (Token::SIntRoot(la), Token::SFracRoot(mut ra)) if la.base == ra.base => {
+            ra.mul.int = sub!(la.mul, ra.mul.int);
+            ra.mul.num = mul!(ra.mul.num, -1);
+            Ok(Token::SFracRoot(ra))
+        }
+        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) if la.base == ra.base => {
+            match la.mul.sub(&ra.mul) {
+                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(x) => Err(x),
+                _ => Ok(Token::SFracRoot(la)),
+            }
+        }
+        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+            la.mul = sub!(la.mul, ra.mul);
+            Ok(Token::CIntRoot(la))
+        }
+        (Token::CFracRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+            la.mul.int = sub!(la.mul.int, ra.mul);
+            Ok(Token::CFracRoot(la))
+        }
+        (Token::CIntRoot(la), Token::CFracRoot(mut ra)) if la.base == ra.base => {
+            ra.mul.int = sub!(la.mul, ra.mul.int);
+            ra.mul.num = mul!(ra.mul.num, -1);
+            Ok(Token::CFracRoot(ra))
+        }
+        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) if la.base == ra.base => {
+            match la.mul.sub(&ra.mul) {
+                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(x) => Err(x),
+                _ => Ok(Token::CFracRoot(la)),
+            }
+        }
         (Token::Double(la), ra) => Ok(Token::Double(double_check!(la - double!(ra)))),
         (la, Token::Double(ra)) => Ok(Token::Double(double_check!(double!(la) - ra))),
         _ => Err(MathError::Impossible),
@@ -71,6 +147,98 @@ pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             }
         }
         (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(mul!(la, ra))),
+        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) => {
+            la.mul = mul!(la.mul, ra.mul);
+            let res = factorise(mul!(la.base, ra.base), true);
+            la.mul = mul!(la.mul, res.outside);
+            match res.inside {
+                1 => Ok(Token::Integer(la.mul)),
+                _ => {
+                    la.base = res.inside;
+                    Ok(Token::SIntRoot(la))
+                }
+            }
+        }
+        (Token::SFracRoot(mut la), Token::SIntRoot(ra))
+        | (Token::SIntRoot(ra), Token::SFracRoot(mut la)) => {
+            la.mul.int = mul!(la.mul.int, ra.mul);
+            la.mul.num = mul!(la.mul.num, ra.mul);
+            let res = factorise(mul!(la.base, ra.base), true);
+            la.mul.int = mul!(la.mul.int, res.outside);
+            la.mul.num = mul!(la.mul.num, res.outside);
+            match res.inside {
+                1 => match la.mul.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la.mul)),
+                },
+                _ => match la.mul.normalise() {
+                    Err(MathError::InvalidFraction) => {
+                        Ok(Token::SIntRoot(SRoot::new(la.mul.int, res.inside)))
+                    }
+                    Err(x) => Err(x),
+                    _ => Ok(Token::SFracRoot(SRoot::new(la.mul, res.inside))),
+                },
+            }
+        }
+        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) => match la.mul.mul(&ra.mul) {
+            Err(MathError::InvalidFraction) => {
+                let res = factorise(mul!(la.base, ra.base), true);
+                la.mul.int = mul!(la.mul.int, res.outside);
+                match res.inside {
+                    1 => Ok(Token::Integer(la.mul.int)),
+                    _ => Ok(Token::SIntRoot(SRoot::new(la.mul.int, res.inside))),
+                }
+            }
+            Err(x) => Err(x),
+            _ => Ok(Token::SFracRoot(la)),
+        },
+        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) => {
+            la.mul = mul!(la.mul, ra.mul);
+            let res = factorise(mul!(la.base, ra.base), true);
+            la.mul = mul!(la.mul, res.outside);
+            match res.inside {
+                1 => Ok(Token::Integer(la.mul)),
+                _ => {
+                    la.base = res.inside;
+                    Ok(Token::CIntRoot(la))
+                }
+            }
+        }
+        (Token::CFracRoot(mut la), Token::CIntRoot(ra))
+        | (Token::CIntRoot(ra), Token::CFracRoot(mut la)) => {
+            la.mul.int = mul!(la.mul.int, ra.mul);
+            la.mul.num = mul!(la.mul.num, ra.mul);
+            let res = factorise(mul!(la.base, ra.base), true);
+            la.mul.int = mul!(la.mul.int, res.outside);
+            la.mul.num = mul!(la.mul.num, res.outside);
+            match res.inside {
+                1 => match la.mul.normalise() {
+                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                    Err(x) => Err(x),
+                    _ => Ok(Token::Fraction(la.mul)),
+                },
+                _ => match la.mul.normalise() {
+                    Err(MathError::InvalidFraction) => {
+                        Ok(Token::CIntRoot(CRoot::new(la.mul.int, res.inside)))
+                    }
+                    Err(x) => Err(x),
+                    _ => Ok(Token::CFracRoot(CRoot::new(la.mul, res.inside))),
+                },
+            }
+        }
+        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) => match la.mul.mul(&ra.mul) {
+            Err(MathError::InvalidFraction) => {
+                let res = factorise(mul!(la.base, ra.base), true);
+                la.mul.int = mul!(la.mul.int, res.outside);
+                match res.inside {
+                    1 => Ok(Token::Integer(la.mul.int)),
+                    _ => Ok(Token::CIntRoot(CRoot::new(la.mul.int, res.inside))),
+                }
+            }
+            Err(x) => Err(x),
+            _ => Ok(Token::CFracRoot(la)),
+        },
         (la, ra) => Ok(Token::Double(double_check!(double!(la) * double!(ra)))),
     };
     match try_mul((l_number, r_number)) {
