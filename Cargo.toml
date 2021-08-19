@@ -8,3 +8,8 @@ edition = "2018"
 [dependencies]
 itertools = "0.10.1"
 gcd = "2.0.1"
+eframe = "0.13.1"
+serde = { version = "1", features = ["derive"], optional = true }
+
+[features]
+persistence = ["eframe/persistence", "serde"] # Enable if you want to persist app state on shutdown

@@ -4,19 +4,12 @@ use crate::my_math::ten_to_the_power_of;
 use crate::number::{add, div, exp, mul, sub};
 use crate::types::{Fraction, MathError, Token};
 
-pub struct Expression<'a> {
-    string: &'a str,
+#[derive(Default)]
+pub struct Expression {
     pub infix_token: Vec<Token>,
 }
 
-impl<'a> Expression<'a> {
-    pub fn new(string: &str) -> Expression {
-        Expression {
-            string,
-            infix_token: vec![],
-        }
-    }
-
+impl Expression {
     #[inline]
     fn check_if_last_token_was_op(&self) -> bool {
         !matches!(
@@ -33,12 +26,12 @@ impl<'a> Expression<'a> {
         )
     }
     #[allow(clippy::manual_range_contains)]
-    pub fn tokenise(&mut self) -> MathError {
-        let string_char_len = self.string.chars().count();
+    pub fn tokenise(&mut self, string: &str) -> MathError {
+        let string_char_len = string.chars().count();
         let mut decimal_point_index = None;
         let mut checking_number = false;
         let mut new_string: String = String::new();
-        for (idx, (elem, next)) in self.string.chars().chain([' ']).tuple_windows().enumerate() {
+        for (idx, (elem, next)) in string.chars().chain([' ']).tuple_windows().enumerate() {
             if !checking_number
                 && (('0' <= elem && elem <= '9')
                     || elem == '.'
