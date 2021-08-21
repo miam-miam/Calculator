@@ -6,12 +6,12 @@ fn main() {
     let app = CalcApp::default();
     let native_options = NativeOptions {
         always_on_top: false,
-        decorated: false,
+        decorated: true,
         drag_and_drop_support: false,
         icon_data: None,
         initial_window_size: None,
-        resizable: false,
-        transparent: true,
+        resizable: true,
+        transparent: false,
     };
     eframe::run_native(Box::new(app), native_options);
 }
