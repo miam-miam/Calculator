@@ -1,7 +1,11 @@
 #![allow(illegal_floating_point_literal_pattern)]
 #[macro_use]
+extern crate lazy_static;
+extern crate pest;
+#[macro_use]
+extern crate pest_derive;
+#[macro_use]
 pub mod macros;
-pub mod app;
 pub mod expression;
 pub mod my_math;
 pub mod number;
@@ -17,30 +21,6 @@ mod tests {
         assert_eq!(
             expr.tokenise("456123+5646546 - 46546 /1.0*9-0.01+(-9)"),
             types::MathError::None
-        );
-        assert_eq!(
-            expr.infix_token,
-            vec![
-                types::Token::Integer(456123),
-                types::Token::Plus,
-                types::Token::Integer(5646546),
-                types::Token::Minus,
-                types::Token::Integer(46546),
-                types::Token::Divide,
-                types::Token::Integer(1),
-                types::Token::Multiply,
-                types::Token::Integer(9),
-                types::Token::Minus,
-                types::Token::Fraction(types::Fraction {
-                    int: 0,
-                    num: 1,
-                    den: 100
-                }),
-                types::Token::Plus,
-                types::Token::LBracket,
-                types::Token::Integer(-9),
-                types::Token::RBracket,
-            ]
         );
         let mut expr1 = expression::Expression::default();
         assert_eq!(expr1.tokenise("56+9"), types::MathError::None);

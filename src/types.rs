@@ -46,8 +46,7 @@ impl fmt::Debug for Token {
 #[derive(Debug, Eq, PartialEq)]
 pub enum MathError {
     None,
-    UnmatchedBracket,
-    UnknownOperator,
+    SyntaxError,
     Overflow,
     DoubleOverflow,
     DivisionByZero,
@@ -55,27 +54,22 @@ pub enum MathError {
     // For 0^0
     ExponentiationError,
     InvalidDecimalPoint,
-    Error,
     // Using Fraction to store int
     InvalidFraction,
-    Impossible,
 }
 
 impl fmt::Display for MathError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             MathError::None => write!(f, "All good!"),
-            MathError::UnmatchedBracket => write!(f, "Unmatched bracket"),
-            MathError::UnknownOperator => write!(f, "Unknown operator"),
+            MathError::SyntaxError => write!(f, "Incorrect syntax"),
             MathError::Overflow => write!(f, "Overflow"),
-            MathError::DoubleOverflow => write!(f, "Proper Overflow"),
+            MathError::DoubleOverflow => write!(f, "Proper overflow"),
             MathError::DivisionByZero => write!(f, "Division by zero"),
             MathError::ComplexNumber => write!(f, "Complex numbers not implemented"),
             MathError::ExponentiationError => write!(f, "Cannot compute 0^0"),
             MathError::InvalidDecimalPoint => write!(f, "Invalid decimal point"),
             MathError::InvalidFraction => write!(f, "Fraction should be integer"),
-            MathError::Error => write!(f, "A general error happened"),
-            MathError::Impossible => write!(f, "Not possible"),
         }
     }
 }

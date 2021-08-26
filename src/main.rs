@@ -1,5 +1,5 @@
-use calculator::app::CalcApp;
-
+mod app;
+use crate::app::CalcApp;
 use eframe::NativeOptions;
 
 fn main() {

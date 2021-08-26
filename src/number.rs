@@ -117,9 +117,7 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 _ => Ok(Token::CFracRoot(la)),
             }
         }
-        (Token::Double(la), ra) => Ok(Token::Double(double_check!(la - double!(ra)))),
-        (la, Token::Double(ra)) => Ok(Token::Double(double_check!(double!(la) - ra))),
-        _ => Err(MathError::Impossible),
+        (la, ra) => Ok(Token::Double(double_check!(double!(la) - double!(ra)))),
     };
     match try_sub((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(

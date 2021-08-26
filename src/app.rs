@@ -1,5 +1,5 @@
-use crate::expression::Expression;
-use crate::types::{MathError, Token};
+use calculator::expression::{eval, Expression, Parser, Rule};
+use calculator::types::{MathError, Token};
 use eframe::egui::epaint::{color, Shadow};
 use eframe::egui::{Align2, Frame, Window};
 use eframe::{egui, epi};
@@ -7,7 +7,6 @@ use eframe::{egui, epi};
 pub struct CalcApp {
     input: String,
     prev_input: String,
-    expression: Expression,
     result: Result<Token, MathError>,
 }
 
@@ -16,9 +15,6 @@ impl Default for CalcApp {
         Self {
             input: "".to_string(),
             prev_input: "".to_string(),
-            expression: Expression {
-                infix_token: vec![],
-            },
             result: Err(MathError::None),
         }
     }
@@ -32,16 +28,20 @@ impl epi::App for CalcApp {
             .show(ctx, |ui| {
                 ui.text_edit_singleline(&mut self.input);
                 if self.input != self.prev_input {
+                    self.prev_input = self.input.clone();
                     if self.input == "!" {
                         frame.quit();
+                    } else if self.input.is_empty() {
+                        self.result = Err(MathError::None);
+                    } else {
+                        self.result = match Expression::parse(Rule::calculation, &self.input) {
+                            Ok(calc) => eval(calc),
+                            Err(_) => Err(MathError::SyntaxError),
+                        }
                     }
-                    self.prev_input = self.input.clone();
-                    self.expression = Expression::default();
-                    self.expression.tokenise(&self.input);
-                    self.result = self.expression.calculate();
                 }
-                ui.label(format!("With tokens: {:?}", self.expression.infix_token));
                 ui.label(match &self.result {
+                    Err(MathError::None) => "Awaiting input...".to_string(),
                     Err(e) => format!("Got Error: {}", e),
                     Ok(t) => format!("Got Result: {:?}", t),
                 });
