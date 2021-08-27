@@ -29,6 +29,7 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
         |pair: Pair<Rule>| {
             match pair.as_rule() {
                 Rule::expr => eval(pair.into_inner()),
+                Rule::func => fn_eval(pair.into_inner()),
                 Rule::int => {
                     // TODO do exp
                     let int_str = pair.as_str();
@@ -124,6 +125,20 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
             _ => unreachable!(),
         },
     )
+}
+
+fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
+    match function.next().unwrap().as_rule() {
+        Rule::sqrt => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Fraction(Fraction::new(0, 1, 2)),
+        ),
+        Rule::cbrt => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Fraction(Fraction::new(0, 1, 3)),
+        ),
+        _ => unreachable!(),
+    }
 }
 
 fn match_string_to_float(string: &str) -> Option<f64> {

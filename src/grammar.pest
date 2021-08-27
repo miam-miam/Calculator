@@ -12,8 +12,13 @@ operation = _{ add | subtract | divide | power | multiply }
     power    = { "^" | "**" }
     multiply = { "*" | "" }
 
+func = {single_arg}
+    single_arg = _{(sqrt | cbrt) ~ "(" ~ expr ~ ")"?}
+        sqrt = {"sqrt" | "square"}
+        cbrt = {"cbrt" | "cube"}
+
 expr = { term ~ (operation ~ term)* }
-term = _{ dec | int | "(" ~ expr ~ ")"? }
+term = _{ dec | int | func | "(" ~ expr ~ ")"? }
 
 calculation = _{ SOI ~ expr ~ EOI }
 
