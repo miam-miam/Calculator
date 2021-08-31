@@ -36,6 +36,5 @@ macro_rules! double {
                     * (i.base as f64).cbrt())
             }
             Token::Double(i) => i,
-            _ => unreachable!(),
         })
 }

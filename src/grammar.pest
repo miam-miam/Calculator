@@ -1,5 +1,4 @@
 basic_int = @{("+" | "-")? ~ ASCII_DIGIT+}
-digits = @{ ASCII_DIGIT* }
 basic_dec = @{ "0"* ~ '1'..'9' ~ '0'..'9'* } // Ensures that 2.0000000 is not a dec
 // Using compound since it allows us to then directly extract the different components of each int/dec.
 int = ${ basic_int ~ "."? ~ "0"* ~ (^"e" ~ basic_int)? } // . and 0 is used so that 2.000000 is considered an int
@@ -13,9 +12,11 @@ operation = _{ add | subtract | divide | power | multiply }
     multiply = { "*" | "" }
 
 func = {single_arg}
-    single_arg = _{(sqrt | cbrt) ~ "(" ~ expr ~ ")"?}
-        sqrt = {"sqrt" | "square"}
-        cbrt = {"cbrt" | "cube"}
+    single_arg = _{(sqrt | cbrt | square | cube) ~ "(" ~ expr ~ ")"?}
+        sqrt = {"sqrt"}
+        cbrt = {"cbrt"}
+        square = {"square"}
+        cube = {"cube"}
 
 expr = { term ~ (operation ~ term)* }
 term = _{ dec | int | func | "(" ~ expr ~ ")"? }

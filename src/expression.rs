@@ -37,10 +37,7 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                     let (integer, _exponent) = (pairs.next().unwrap().as_str(), pairs.next());
                     match integer.parse::<i128>() {
                         Ok(result) => Ok(Token::Integer(result)),
-                        Err(_) => match match_string_to_float(int_str) {
-                            Some(result) => Ok(Token::Double(result)),
-                            None => Err(MathError::DoubleOverflow),
-                        },
+                        Err(_) => match_string_to_float(int_str),
                     }
                 }
                 Rule::dec => {
@@ -66,23 +63,20 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                     match exponent {
                         Some(_) => {
                             // TODO make it return fraction/integer if it can.
-                            match match_string_to_float(pair_str) {
-                                Some(x) => Ok(Token::Double(x)),
-                                None => Err(MathError::DoubleOverflow),
-                            }
+                            match_string_to_float(pair_str)
                         }
                         None => match integer.parse::<i128>() {
                             Ok(integer) => match decimal.parse::<i128>() {
                                 Ok(decimal_int) => match ten_to_the_power_of(decimal.len() as i128)
                                 {
-                                    None => match match_string_to_float(pair_str) {
-                                        Some(x) => Ok(Token::Double(x)),
-                                        None => Err(MathError::DoubleOverflow),
-                                    },
+                                    None => match_string_to_float(pair_str),
                                     Some(result) => {
                                         let mut fraction = Fraction {
                                             int: integer,
-                                            num: decimal_int,
+                                            num: match integer {
+                                                0..=i128::MAX => decimal_int,
+                                                i128::MIN..=-1 => mul!(decimal_int, -1),
+                                            },
                                             den: result,
                                         };
                                         match fraction.normalise() {
@@ -90,24 +84,15 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                                                 Ok(Token::Integer(fraction.int))
                                             }
                                             Err(MathError::Overflow) => {
-                                                match match_string_to_float(pair_str) {
-                                                    Some(x) => Ok(Token::Double(x)),
-                                                    None => Err(MathError::DoubleOverflow),
-                                                }
+                                                match_string_to_float(pair_str)
                                             }
                                             _ => Ok(Token::Fraction(fraction)),
                                         }
                                     }
                                 },
-                                Err(_) => match match_string_to_float(pair_str) {
-                                    Some(x) => Ok(Token::Double(x)),
-                                    None => Err(MathError::DoubleOverflow),
-                                },
+                                Err(_) => match_string_to_float(pair_str),
                             },
-                            Err(_) => match match_string_to_float(pair_str) {
-                                Some(x) => Ok(Token::Double(x)),
-                                None => Err(MathError::DoubleOverflow),
-                            },
+                            Err(_) => match_string_to_float(pair_str),
                         },
                     }
                 }
@@ -131,24 +116,29 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
     match function.next().unwrap().as_rule() {
         Rule::sqrt => exp(
             eval(function.next().unwrap().into_inner())?,
-            Token::Fraction(Fraction::new(0, 1, 2)),
+            Token::fraction(0, 1, 2),
         ),
         Rule::cbrt => exp(
             eval(function.next().unwrap().into_inner())?,
-            Token::Fraction(Fraction::new(0, 1, 3)),
+            Token::fraction(0, 1, 3),
+        ),
+
+        Rule::square => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Integer(2),
+        ),
+        Rule::cube => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Integer(3),
         ),
         _ => unreachable!(),
     }
 }
 
-fn match_string_to_float(string: &str) -> Option<f64> {
+#[inline]
+fn match_string_to_float(string: &str) -> Result<Token, MathError> {
     match string.parse::<f64>() {
-        Ok(i) => {
-            if i == f64::INFINITY || i == f64::NEG_INFINITY {
-                return None;
-            }
-            Some(i)
-        }
-        Err(_) => None,
+        Ok(i) if i != f64::INFINITY && i != f64::NEG_INFINITY => Ok(Token::Double(i)),
+        _ => Err(MathError::DoubleOverflow),
     }
 }

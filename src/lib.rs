@@ -13,193 +13,108 @@ pub mod types;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::expression::{eval, Expression, Parser, Rule};
+    use crate::types::{MathError, Token};
 
     #[test]
-    fn tokenise() {
-        let mut expr = expression::Expression::default();
+    fn number_parse() {
         assert_eq!(
-            expr.tokenise("456123+5646546 - 46546 /1.0*9-0.01+(-9)"),
-            types::MathError::None
+            eval(
+                Expression::parse(Rule::calculation, "170141183460469231731687303715884105727")
+                    .unwrap()
+            ),
+            Ok(Token::Integer(i128::MAX))
         );
-        let mut expr1 = expression::Expression::default();
-        assert_eq!(expr1.tokenise("56+9"), types::MathError::None);
         assert_eq!(
-            expr1.infix_token,
-            vec![
-                types::Token::Integer(56),
-                types::Token::Plus,
-                types::Token::Integer(9)
-            ]
+            eval(
+                Expression::parse(Rule::calculation, "170141183460469231731687303715884105728")
+                    .unwrap()
+            ),
+            Ok(Token::Double(i128::MAX as f64 + 1_f64))
         );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "+5").unwrap()),
+            Ok(Token::Integer(5))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "-5").unwrap()),
+            Ok(Token::Integer(-5))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "5.5").unwrap()),
+            Ok(Token::fraction(5, 1, 2))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "-5.5").unwrap()),
+            Ok(Token::fraction(-5, -1, 2))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, ".5").unwrap()),
+            Ok(Token::fraction(0, 1, 2))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "-5.0").unwrap()),
+            Ok(Token::Integer(-5))
+        );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "1.0").unwrap()),
+            Ok(Token::Integer(1))
+        );
+        assert!(Expression::parse(Rule::calculation, "-.5").is_err());
+        assert!(Expression::parse(Rule::calculation, "+.5").is_err());
     }
 
     #[test]
-    fn normalise() {
-        let mut fr = types::Fraction {
-            int: 1,
-            num: 5,
-            den: 2,
-        };
-        assert_eq!(fr.normalise(), Ok(()));
+    fn e_parse() {
         assert_eq!(
-            fr,
-            types::Fraction {
-                int: 3,
-                num: 1,
-                den: 2,
-            }
-        );
-    }
-
-    #[test]
-    fn add() {
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("5+1-5.1+2-5.1+9.5-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+9-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-7.1+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"), types::MathError::None);
-        assert_eq!(
-            Ok(types::Token::Integer(6)),
-            number::add(expr.infix_token[0], expr.infix_token[2])
+            eval(
+                Expression::parse(
+                    Rule::calculation,
+                    "170141183460469231731687303715884105727e0"
+                )
+                .unwrap()
+            ),
+            Ok(Token::Integer(i128::MAX))
         );
         assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(7, 1, 10))),
-            number::add(expr.infix_token[4], expr.infix_token[6])
+            eval(
+                Expression::parse(
+                    Rule::calculation,
+                    "170141183460469231731687303715884105728e2"
+                )
+                .unwrap()
+            ),
+            Ok(Token::Double((i128::MAX as f64 + 1_f64) * 100_f64))
         );
         assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(14, 3, 5))),
-            number::add(expr.infix_token[8], expr.infix_token[10])
+            eval(Expression::parse(Rule::calculation, "+5e-1").unwrap()),
+            Ok(Token::fraction(0, 1, 2))
         );
         assert_eq!(
-            Ok(types::Token::Double(14_f64)),
-            number::add(expr.infix_token[12], expr.infix_token[14])
+            eval(Expression::parse(Rule::calculation, "-5e-1").unwrap()),
+            Ok(Token::fraction(0, -1, 2))
         );
         assert_eq!(
-            Ok(types::Token::Double(10_f64)),
-            number::add(expr.infix_token[16], expr.infix_token[18])
+            eval(Expression::parse(Rule::calculation, "5.5e-1").unwrap()),
+            Ok(Token::fraction(0, 11, 20))
         );
         assert_eq!(
-            Ok(types::Token::Double(12.1_f64)),
-            number::add(expr.infix_token[20], expr.infix_token[22])
-        );
-    }
-
-    #[test]
-    fn sub() {
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("5-1+5.1-2+5.1-9.5+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1-5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"), types::MathError::None);
-        assert_eq!(
-            Ok(types::Token::Integer(4)),
-            number::sub(expr.infix_token[0], expr.infix_token[2])
+            eval(Expression::parse(Rule::calculation, "-5.5e+1").unwrap()),
+            Ok(Token::Integer(-55))
         );
         assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(3, 1, 10))),
-            number::sub(expr.infix_token[4], expr.infix_token[6])
+            eval(Expression::parse(Rule::calculation, ".5e0").unwrap()),
+            Ok(Token::fraction(0, 1, 2))
         );
         assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(-4, -2, 5))),
-            number::sub(expr.infix_token[8], expr.infix_token[10])
+            eval(Expression::parse(Rule::calculation, "-5.0e1").unwrap()),
+            Ok(Token::Integer(-50))
         );
         assert_eq!(
-            Ok(types::Token::Double(-4_f64)),
-            number::sub(expr.infix_token[12], expr.infix_token[14])
+            eval(Expression::parse(Rule::calculation, "1.0e2").unwrap()),
+            Ok(Token::Integer(100))
         );
-        assert_eq!(
-            Ok(types::Token::Double(0_f64)),
-            number::sub(expr.infix_token[16], expr.infix_token[18])
-        );
-        assert_eq!(
-            Ok(types::Token::Double(2.0999999999999996_f64)),
-            number::sub(expr.infix_token[20], expr.infix_token[22])
-        );
-    }
-
-    #[test]
-    fn mul() {
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("5*1+5.1*2+5.1*9.5+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001*9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001*5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1*5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"), types::MathError::None);
-        assert_eq!(
-            Ok(types::Token::Integer(5)),
-            number::mul(expr.infix_token[0], expr.infix_token[2])
-        );
-        assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(10, 1, 5))),
-            number::mul(expr.infix_token[4], expr.infix_token[6])
-        );
-        assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(48, 9, 20))),
-            number::mul(expr.infix_token[8], expr.infix_token[10])
-        );
-        assert_eq!(
-            Ok(types::Token::Double(45_f64)),
-            number::mul(expr.infix_token[12], expr.infix_token[14])
-        );
-        assert_eq!(
-            Ok(types::Token::Double(25_f64)),
-            number::mul(expr.infix_token[16], expr.infix_token[18])
-        );
-        assert_eq!(
-            Ok(types::Token::Double(35.5_f64)),
-            number::mul(expr.infix_token[20], expr.infix_token[22])
-        );
-    }
-
-    #[test]
-    fn div() {
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001+7.1/0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"), types::MathError::None);
-        assert_eq!(
-            Ok(types::Token::Integer(5)),
-            number::div(expr.infix_token[0], expr.infix_token[2])
-        );
-        assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(2, 11, 20))),
-            number::div(expr.infix_token[4], expr.infix_token[6])
-        );
-        assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(0, 51, 95))),
-            number::div(expr.infix_token[8], expr.infix_token[10])
-        );
-        assert_eq!(
-            Ok(types::Token::Fraction(types::Fraction::new(0, 5, 9))),
-            number::div(expr.infix_token[12], expr.infix_token[14])
-        );
-        assert_eq!(
-            Ok(types::Token::Double(1_f64)),
-            number::div(expr.infix_token[16], expr.infix_token[18])
-        );
-        assert_eq!(
-            Err(types::MathError::DivisionByZero),
-            number::div(expr.infix_token[20], expr.infix_token[22])
-        );
-    }
-
-    #[test]
-    fn evaluate() {
-        let mut expr = expression::Expression::default();
-        assert_eq!(
-            expr.tokenise("9.856/8.7+9*(5.1+0.1)"),
-            types::MathError::None
-        );
-        assert_eq!(
-            expr.calculate(),
-            Ok(types::Token::Fraction(types::Fraction::new(47, 2029, 2175)))
-        );
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("(8/((5-5)/(9.1*4)))"), types::MathError::None);
-        assert_eq!(expr.calculate(), Err(types::MathError::DivisionByZero));
-        let mut expr = expression::Expression::default();
-        assert_eq!(expr.tokenise("5/1+5.1/2+5.1/9.5+5/9+5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001/5.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"), types::MathError::None);
-        assert_eq!(
-            expr.calculate(),
-            Ok(types::Token::Double(9.642397660818713_f64))
-        );
-        let mut expr = expression::Expression::default();
-        assert_eq!(
-            expr.tokenise("5/1+5.1/2+5.1/9.5+5/9+8.4/7"),
-            types::MathError::None
-        );
-        assert_eq!(
-            expr.calculate(),
-            Ok(types::Token::Fraction(types::Fraction::new(9, 2881, 3420)))
-        );
+        assert!(Expression::parse(Rule::calculation, "-.5e5").is_err());
+        assert!(Expression::parse(Rule::calculation, "+.5e5").is_err());
     }
 }

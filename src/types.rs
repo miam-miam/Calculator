@@ -11,14 +11,43 @@ pub enum Token {
     CIntRoot(CRoot<i128>),
     CFracRoot(CRoot<Fraction>),
     Double(f64),
-    None,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Exponentiation,
-    LBracket,
-    RBracket,
+}
+
+impl Token {
+    #[inline]
+    pub fn fraction(int: i128, num: i128, den: i128) -> Token {
+        Token::Fraction(Fraction { int, num, den })
+    }
+    #[inline]
+    pub fn s_int_root(mul: i128, base: i128) -> Token {
+        Token::SIntRoot(SRoot { mul, base })
+    }
+    #[inline]
+    pub fn c_int_root(mul: i128, base: i128) -> Token {
+        Token::CIntRoot(CRoot { mul, base })
+    }
+    #[inline]
+    pub fn s_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
+        Token::SFracRoot(SRoot {
+            mul: Fraction { int, num, den },
+            base,
+        })
+    }
+    #[inline]
+    pub fn c_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
+        Token::CFracRoot(CRoot {
+            mul: Fraction { int, num, den },
+            base,
+        })
+    }
+    #[inline]
+    pub fn s_fraction_root(mul: Fraction, base: i128) -> Token {
+        Token::SFracRoot(SRoot { mul, base })
+    }
+    #[inline]
+    pub fn c_fraction_root(mul: Fraction, base: i128) -> Token {
+        Token::CFracRoot(CRoot { mul, base })
+    }
 }
 
 impl fmt::Debug for Token {
@@ -31,14 +60,6 @@ impl fmt::Debug for Token {
             Token::CIntRoot(r) => write!(f, "Cbrt: {}", r),
             Token::CFracRoot(r) => write!(f, "Cbrt: {}", r),
             Token::Double(d) => write!(f, "Double: {}", d),
-            Token::None => write!(f, "None"),
-            Token::Plus => write!(f, "Plus"),
-            Token::Minus => write!(f, "Minus"),
-            Token::Multiply => write!(f, "Multiply"),
-            Token::Divide => write!(f, "Divide"),
-            Token::Exponentiation => write!(f, "Exponentiation"),
-            Token::LBracket => write!(f, "LBracket"),
-            Token::RBracket => write!(f, "RBracket"),
         }
     }
 }
