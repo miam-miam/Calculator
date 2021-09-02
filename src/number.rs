@@ -57,7 +57,7 @@ fn try_add(tup: (Token, Token)) -> Result<Token, MathError> {
 pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_add((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            l_number.double()? + r_number.double()?
+            l_number.double() + r_number.double()
         ))),
         value => value,
     }
@@ -127,7 +127,7 @@ fn try_sub(tup: (Token, Token)) -> Result<Token, MathError> {
 pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_sub((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            l_number.double()? - r_number.double()?
+            l_number.double() - r_number.double()
         ))),
         value => value,
     }
@@ -253,7 +253,7 @@ fn try_mul(tup: (Token, Token)) -> Result<Token, MathError> {
 pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_mul((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            l_number.double()? * r_number.double()?
+            l_number.double() * r_number.double()
         ))),
         value => value,
     }
@@ -530,7 +530,7 @@ fn try_div(tup: (Token, Token)) -> Result<Token, MathError> {
 pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_div((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            l_number.double()? / r_number.double()?
+            l_number.double() / r_number.double()
         ))),
         value => value,
     }
@@ -841,7 +841,7 @@ fn try_exp(tup: (Token, Token)) -> Result<Token, MathError> {
 pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_exp((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            (l_number.double()?).powf(r_number.double()?)
+            (l_number.double()).powf(r_number.double())
         ))),
         value => value,
     }

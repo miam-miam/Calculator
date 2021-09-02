@@ -120,41 +120,40 @@ impl Token {
         }
     }
 
-    pub fn double(self) -> Result<f64, MathError> {
+    /// This function does not check if the f64 is valid as such it is recommended to check with double_check!() once the computations are finished.
+    pub fn double(self) -> f64 {
         match self {
-            Token::Integer(i) => Ok(i as f64),
-            Token::Fraction(i) => Ok(i.int as f64 + i.num as f64 / i.den as f64),
-            Token::SIntRoot(i) => Ok(double_check!((i.mul as f64) * (i.base as f64).sqrt())),
-            Token::SFracRoot(i) => Ok(double_check!(
+            Token::Integer(i) => i as f64,
+            Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
+            Token::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
+            Token::SFracRoot(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
-            )),
-            Token::CIntRoot(i) => Ok(double_check!((i.mul as f64) * (i.base as f64).sqrt())),
-            Token::CFracRoot(i) => Ok(double_check!(
+            }
+            Token::CIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
+            Token::CFracRoot(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
-            )),
-            Token::PiInteger(i) => Ok(double_check!(i.mul as f64 * std::f64::consts::PI)),
-            Token::PiFraction(i) => Ok(double_check!(
+            }
+            Token::PiInteger(i) => i.mul as f64 * std::f64::consts::PI,
+            Token::PiFraction(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * std::f64::consts::PI
-            )),
-            Token::PiSIntRoot(i) => Ok(double_check!(
+            }
+            Token::PiSIntRoot(i) => {
                 (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
-            )),
-            Token::PiSFracRoot(i) => Ok(double_check!(
+            }
+            Token::PiSFracRoot(i) => {
                 (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
                     * (i.mul.base as f64).cbrt()
                     * std::f64::consts::PI
-            )),
-
-            Token::PiCIntRoot(i) => Ok(double_check!(
+            }
+            Token::PiCIntRoot(i) => {
                 (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
-            )),
-            Token::PiCFracRoot(i) => Ok(double_check!(
+            }
+            Token::PiCFracRoot(i) => {
                 (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
                     * (i.mul.base as f64).cbrt()
                     * std::f64::consts::PI
-            )),
-
-            Token::Double(i) => Ok(i),
+            }
+            Token::Double(i) => i,
         }
     }
 }
