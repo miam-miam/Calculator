@@ -10,6 +10,12 @@ pub enum Token {
     SFracRoot(SRoot<Fraction>),
     CIntRoot(CRoot<i128>),
     CFracRoot(CRoot<Fraction>),
+    PiInteger(Pi<i128>),
+    PiFraction(Pi<Fraction>),
+    PiSIntRoot(Pi<SRoot<i128>>),
+    PiSFracRoot(Pi<SRoot<Fraction>>),
+    PiCIntRoot(Pi<CRoot<i128>>),
+    PiCFracRoot(Pi<CRoot<Fraction>>),
     Double(f64),
 }
 
@@ -48,6 +54,109 @@ impl Token {
     pub fn c_fraction_root(mul: Fraction, base: i128) -> Token {
         Token::CFracRoot(CRoot { mul, base })
     }
+    #[inline]
+    pub fn pi_integer(int: i128) -> Token {
+        Token::PiInteger(Pi { mul: int })
+    }
+    #[inline]
+    pub fn pi_fraction(int: i128, num: i128, den: i128) -> Token {
+        Token::PiFraction(Pi {
+            mul: Fraction { int, num, den },
+        })
+    }
+    #[inline]
+    pub fn pi_s_int_root(mul: i128, base: i128) -> Token {
+        Token::PiSIntRoot(Pi {
+            mul: SRoot { mul, base },
+        })
+    }
+    #[inline]
+    pub fn pi_c_int_root(mul: i128, base: i128) -> Token {
+        Token::PiCIntRoot(Pi {
+            mul: CRoot { mul, base },
+        })
+    }
+    #[inline]
+    pub fn pi_s_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
+        Token::PiSFracRoot(Pi {
+            mul: SRoot {
+                mul: Fraction { int, num, den },
+                base,
+            },
+        })
+    }
+    #[inline]
+    pub fn pi_c_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
+        Token::PiCFracRoot(Pi {
+            mul: CRoot {
+                mul: Fraction { int, num, den },
+                base,
+            },
+        })
+    }
+    #[inline]
+    pub fn pi_s_fraction_root(mul: Fraction, base: i128) -> Token {
+        Token::PiSFracRoot(Pi {
+            mul: SRoot { mul, base },
+        })
+    }
+    #[inline]
+    pub fn pi_c_fraction_root(mul: Fraction, base: i128) -> Token {
+        Token::PiCFracRoot(Pi {
+            mul: CRoot { mul, base },
+        })
+    }
+
+    pub fn pi(self) -> Result<Token, MathError> {
+        match self {
+            Token::Integer(i) => Ok(Token::pi_integer(i)),
+            Token::Fraction(i) => Ok(Token::PiFraction(Pi::new(i))),
+            Token::SIntRoot(i) => Ok(Token::PiSIntRoot(Pi::new(i))),
+            Token::SFracRoot(i) => Ok(Token::PiSFracRoot(Pi::new(i))),
+            Token::CIntRoot(i) => Ok(Token::PiCIntRoot(Pi::new(i))),
+            Token::CFracRoot(i) => Ok(Token::PiCFracRoot(Pi::new(i))),
+            Token::Double(i) => Ok(Token::Double(double_check!(i * std::f64::consts::PI))),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn double(self) -> Result<f64, MathError> {
+        match self {
+            Token::Integer(i) => Ok(i as f64),
+            Token::Fraction(i) => Ok(i.int as f64 + i.num as f64 / i.den as f64),
+            Token::SIntRoot(i) => Ok(double_check!((i.mul as f64) * (i.base as f64).sqrt())),
+            Token::SFracRoot(i) => Ok(double_check!(
+                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
+            )),
+            Token::CIntRoot(i) => Ok(double_check!((i.mul as f64) * (i.base as f64).sqrt())),
+            Token::CFracRoot(i) => Ok(double_check!(
+                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
+            )),
+            Token::PiInteger(i) => Ok(double_check!(i.mul as f64 * std::f64::consts::PI)),
+            Token::PiFraction(i) => Ok(double_check!(
+                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * std::f64::consts::PI
+            )),
+            Token::PiSIntRoot(i) => Ok(double_check!(
+                (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
+            )),
+            Token::PiSFracRoot(i) => Ok(double_check!(
+                (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
+                    * (i.mul.base as f64).cbrt()
+                    * std::f64::consts::PI
+            )),
+
+            Token::PiCIntRoot(i) => Ok(double_check!(
+                (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
+            )),
+            Token::PiCFracRoot(i) => Ok(double_check!(
+                (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
+                    * (i.mul.base as f64).cbrt()
+                    * std::f64::consts::PI
+            )),
+
+            Token::Double(i) => Ok(i),
+        }
+    }
 }
 
 impl fmt::Debug for Token {
@@ -59,6 +168,12 @@ impl fmt::Debug for Token {
             Token::SFracRoot(r) => write!(f, "Sqrt: {}", r),
             Token::CIntRoot(r) => write!(f, "Cbrt: {}", r),
             Token::CFracRoot(r) => write!(f, "Cbrt: {}", r),
+            Token::PiInteger(i) => write!(f, "PiInteger: {}", i),
+            Token::PiFraction(fr) => write!(f, "PiFraction: {}", fr),
+            Token::PiSIntRoot(r) => write!(f, "PiSqrt: {}", r),
+            Token::PiSFracRoot(r) => write!(f, "PiSqrt: {}", r),
+            Token::PiCIntRoot(r) => write!(f, "PiCbrt: {}", r),
+            Token::PiCFracRoot(r) => write!(f, "PiCbrt: {}", r),
             Token::Double(d) => write!(f, "Double: {}", d),
         }
     }
@@ -240,5 +355,22 @@ impl<T> CRoot<T> {
 impl<T: fmt::Display> fmt::Display for CRoot<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({})*∛{}", self.mul, self.base)
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct Pi<T> {
+    pub mul: T,
+}
+
+impl<T> Pi<T> {
+    pub fn new(mul: T) -> Pi<T> {
+        Pi { mul }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for Pi<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "({})*π", self.mul)
     }
 }

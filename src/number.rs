@@ -1,8 +1,8 @@
 use crate::my_math::factorise;
 use crate::types::{CRoot, Fraction, MathError, SRoot, Token};
 
-pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    let try_add = |tup| match tup {
+fn try_add(tup: (Token, Token)) -> Result<Token, MathError> {
+    match tup {
         (Token::Fraction(mut la), Token::Fraction(ra)) => match la.add(&ra) {
             Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
             Err(x) => Err(x),
@@ -50,18 +50,21 @@ pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 _ => Ok(Token::CFracRoot(la)),
             }
         }
-        (la, ra) => Ok(Token::Double(double_check!(double!(la) + double!(ra)))),
-    };
+        _ => Err(MathError::Overflow),
+    }
+}
+
+pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_add((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            double!(l_number) + double!(r_number)
+            l_number.double()? + r_number.double()?
         ))),
         value => value,
     }
 }
 
-pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    let try_sub = |tup| match tup {
+fn try_sub(tup: (Token, Token)) -> Result<Token, MathError> {
+    match tup {
         (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(sub!(la, ra))),
         (Token::Fraction(mut la), Token::Integer(ra)) => {
             la.int = sub!(la.int, ra);
@@ -117,18 +120,21 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 _ => Ok(Token::CFracRoot(la)),
             }
         }
-        (la, ra) => Ok(Token::Double(double_check!(double!(la) - double!(ra)))),
-    };
+        _ => Err(MathError::Overflow),
+    }
+}
+
+pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_sub((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            double!(l_number) - double!(r_number)
+            l_number.double()? - r_number.double()?
         ))),
         value => value,
     }
 }
 
-pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    let try_mul = |tup| match tup {
+fn try_mul(tup: (Token, Token)) -> Result<Token, MathError> {
+    match tup {
         (Token::Fraction(mut la), Token::Fraction(ra)) => match la.mul(&ra) {
             Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
             Err(x) => Err(x),
@@ -240,18 +246,20 @@ pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 },
             }
         }
-        (la, ra) => Ok(Token::Double(double_check!(double!(la) * double!(ra)))),
-    };
+        _ => Err(MathError::Overflow),
+    }
+}
+
+pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_mul((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            double!(l_number) * double!(r_number)
+            l_number.double()? * r_number.double()?
         ))),
         value => value,
     }
 }
-
-pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    let try_div = |tup| {
+fn try_div(tup: (Token, Token)) -> Result<Token, MathError> {
+    {
         // Check if zero.
         if let (_, Token::Integer(0)) = tup {
             return Err(MathError::DivisionByZero);
@@ -514,19 +522,22 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                     }
                 }
             }
-            (la, ra) => Ok(Token::Double(double_check!(double!(la) / double!(ra)))),
+            _ => Err(MathError::Overflow),
         }
-    };
+    }
+}
+
+pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_div((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            double!(l_number) / double!(r_number)
+            l_number.double()? / r_number.double()?
         ))),
         value => value,
     }
 }
 
-pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    let try_exp = |tup| {
+fn try_exp(tup: (Token, Token)) -> Result<Token, MathError> {
+    {
         // Check if 0^0.
         if let (Token::Integer(0), Token::Integer(0)) = tup {
             return Err(MathError::ExponentiationError);
@@ -822,12 +833,15 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                     }
                 }
             }
-            (la, ra) => Ok(Token::Double(double_check!(double!(la).powf(double!(ra))))),
+            _ => Err(MathError::Overflow),
         }
-    };
+    }
+}
+
+pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_exp((l_number, r_number)) {
         Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-            (double!(l_number)).powf(double!(r_number))
+            (l_number.double()?).powf(r_number.double()?)
         ))),
         value => value,
     }

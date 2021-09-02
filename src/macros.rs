@@ -20,21 +20,3 @@ macro_rules! none_to_err {
     {$op:expr} => (match $op {Some(x) => x, None => { return Err(MathError::Overflow); }});
     {$op:expr, $error:expr} => (match $op {Some(x) => x, None => { return Err($error); }});
 }
-
-macro_rules! double {
-    {$token:expr} => (match $token {
-            Token::Integer(i) => i as f64,
-            Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
-            Token::SIntRoot(i) => double_check!((i.mul as f64) * (i.base as f64).sqrt()),
-            Token::SFracRoot(i) => {
-                double_check!((i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64)
-                    * (i.base as f64).cbrt())
-            }
-            Token::CIntRoot(i) => double_check!((i.mul as f64) * (i.base as f64).sqrt()),
-            Token::CFracRoot(i) => {
-                double_check!((i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64)
-                    * (i.base as f64).cbrt())
-            }
-            Token::Double(i) => i,
-        })
-}

@@ -8,7 +8,7 @@ use crate::types::{Fraction, MathError, Token};
 use std::cmp::Ordering;
 
 #[derive(Parser)]
-#[grammar = "./grammar.pest"]
+#[grammar = "grammar.pest"]
 pub struct Expression;
 
 lazy_static! {
@@ -154,6 +154,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                 Err(_) => match_string_to_float(entire_dec),
             }
         }
+        Rule::pi => token_eval(pair.into_inner().next().unwrap())?.pi(),
         _ => unreachable!(),
     }
 }
