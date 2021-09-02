@@ -2,7 +2,8 @@ use core::fmt;
 
 use gcd::Gcd;
 
-#[derive(PartialEq, Copy, Clone)]
+// Not adding Copy as will be using Vec
+#[derive(PartialEq, Clone)]
 pub enum Token {
     Integer(i128),
     Fraction(Fraction),
@@ -107,8 +108,9 @@ impl Token {
         })
     }
 
-    pub fn pi(self) -> Result<Token, MathError> {
-        match self {
+    pub fn pi(&self) -> Result<Token, MathError> {
+        match *self {
+            Token::Integer(0) => Ok(Token::Integer(0)),
             Token::Integer(i) => Ok(Token::pi_integer(i)),
             Token::Fraction(i) => Ok(Token::PiFraction(Pi::new(i))),
             Token::SIntRoot(i) => Ok(Token::PiSIntRoot(Pi::new(i))),
@@ -120,9 +122,21 @@ impl Token {
         }
     }
 
+    pub fn normal(&self) -> Token {
+        match *self {
+            Token::PiInteger(i) => Token::Integer(i.mul),
+            Token::PiFraction(i) => Token::Fraction(i.mul),
+            Token::PiSIntRoot(i) => Token::SIntRoot(i.mul),
+            Token::PiSFracRoot(i) => Token::SFracRoot(i.mul),
+            Token::PiCIntRoot(i) => Token::CIntRoot(i.mul),
+            Token::PiCFracRoot(i) => Token::CFracRoot(i.mul),
+            _ => unreachable!(),
+        }
+    }
+
     /// This function does not check if the f64 is valid as such it is recommended to check with double_check!() once the computations are finished.
-    pub fn double(self) -> f64 {
-        match self {
+    pub fn double(&self) -> f64 {
+        match *self {
             Token::Integer(i) => i as f64,
             Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
             Token::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
@@ -156,6 +170,18 @@ impl Token {
             Token::Double(i) => i,
         }
     }
+
+    pub fn is_pi(&self) -> bool {
+        match self {
+            Token::PiInteger(_)
+            | Token::PiFraction(_)
+            | Token::PiSIntRoot(_)
+            | Token::PiSFracRoot(_)
+            | Token::PiCIntRoot(_)
+            | Token::PiCFracRoot(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Debug for Token {
@@ -178,7 +204,7 @@ impl fmt::Debug for Token {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, Copy, PartialEq, Clone)]
 pub enum MathError {
     None,
     SyntaxError,

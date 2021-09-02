@@ -155,6 +155,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
             }
         }
         Rule::pi => token_eval(pair.into_inner().next().unwrap())?.pi(),
+        Rule::single_pi => Ok(Token::pi_integer(1)),
         _ => unreachable!(),
     }
 }

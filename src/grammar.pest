@@ -3,7 +3,8 @@ basic_dec = @{ "0"* ~ '1'..'9' ~ '0'..'9'* } // Ensures that 2.0000000 is not a 
 // Using compound since it allows us to then directly extract the different components of each int/dec.
 int = ${ basic_int ~ "."? ~ "0"* ~ (^"e" ~ basic_int)? } // . and 0 is used so that 2.000000 is considered an int
 dec = ${ basic_int? ~ ("." ~ basic_dec) ~ (^"e" ~ basic_int)? }
-pi = ${ (int | dec) ~ ^"pi" }
+pi = ${ (dec | int) ~ ^"pi" }
+single_pi = ${ ^"pi" }
 
 operation = _{ add | subtract | divide | power | multiply }
     add      = { "+" }
@@ -20,7 +21,7 @@ func = {single_arg}
         cube = {"cube"}
 
 expr = { term ~ (operation ~ term)* }
-term = _{ pi | dec | int | func | "(" ~ expr ~ ")"? }
+term = _{ single_pi | pi | dec | int | func | "(" ~ expr ~ ")"? }
 
 calculation = _{ SOI ~ expr ~ EOI }
 
