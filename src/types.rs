@@ -17,6 +17,7 @@ pub enum Token {
     PiSFracRoot(Pi<SRoot<Fraction>>),
     PiCIntRoot(Pi<CRoot<i128>>),
     PiCFracRoot(Pi<CRoot<Fraction>>),
+    Combined(Vec<Token>),
     Double(f64),
 }
 
@@ -136,8 +137,8 @@ impl Token {
 
     /// This function does not check if the f64 is valid as such it is recommended to check with double_check!() once the computations are finished.
     pub fn double(&self) -> f64 {
-        match *self {
-            Token::Integer(i) => i as f64,
+        match &*self {
+            Token::Integer(i) => *i as f64,
             Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
             Token::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
             Token::SFracRoot(i) => {
@@ -167,7 +168,8 @@ impl Token {
                     * (i.mul.base as f64).cbrt()
                     * std::f64::consts::PI
             }
-            Token::Double(i) => i,
+            Token::Combined(i) => i.iter().fold(0_f64, |acc, tok| acc + tok.double()),
+            Token::Double(i) => *i,
         }
     }
 
@@ -199,6 +201,13 @@ impl fmt::Debug for Token {
             Token::PiSFracRoot(r) => write!(f, "PiSqrt: {}", r),
             Token::PiCIntRoot(r) => write!(f, "PiCbrt: {}", r),
             Token::PiCFracRoot(r) => write!(f, "PiCbrt: {}", r),
+            Token::Combined(v) => {
+                write!(f, "Combined: ")?;
+                for tok in v {
+                    write!(f, "{:?}, ", tok)?;
+                }
+                Ok(())
+            }
             Token::Double(d) => write!(f, "Double: {}", d),
         }
     }

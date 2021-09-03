@@ -196,6 +196,31 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
             eval(function.next().unwrap().into_inner())?,
             Token::Integer(3),
         ),
+        Rule::test => Ok(Token::Combined(
+            function
+                .map(|pair| eval(pair.into_inner()))
+                .collect::<Result<Vec<Token>, MathError>>()?,
+        )),
+        Rule::min => Ok(function
+            .try_fold(
+                (f64::INFINITY, Token::Integer(0)),
+                |acc: (f64, Token), pair: Pair<'_, Rule>| {
+                    let token = eval(pair.into_inner())?;
+                    let double = token.double();
+                    return Ok(if double < acc.0 { (double, token) } else { acc });
+                },
+            )?
+            .1),
+        Rule::max => Ok(function
+            .try_fold(
+                (f64::NEG_INFINITY, Token::Integer(0)),
+                |acc: (f64, Token), pair: Pair<'_, Rule>| {
+                    let token = eval(pair.into_inner())?;
+                    let double = token.double();
+                    return Ok(if double > acc.0 { (double, token) } else { acc });
+                },
+            )?
+            .1),
         _ => unreachable!(),
     }
 }

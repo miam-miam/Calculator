@@ -13,12 +13,18 @@ operation = _{ add | subtract | divide | power | multiply }
     power    = { "^" | "**" }
     multiply = { "*" | "" }
 
-func = {single_arg}
+func = {multi_arg | single_arg}
     single_arg = _{(sqrt | cbrt | square | cube) ~ "(" ~ expr ~ ")"?}
         sqrt = {"sqrt"}
         cbrt = {"cbrt"}
         square = {"square"}
         cube = {"cube"}
+
+    multi_arg = _{(test | min | max) ~ "(" ~ expr ~ (";" ~ expr)* ~ ")"?}
+        //TODO Remove
+        test = {"test"}
+        min = {"min"}
+        max = {"max"}
 
 expr = { term ~ (operation ~ term)* }
 term = _{ single_pi | pi | dec | int | func | "(" ~ expr ~ ")"? }
