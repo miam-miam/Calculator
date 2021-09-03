@@ -1,7 +1,6 @@
 #![allow(illegal_floating_point_literal_pattern)]
 #[macro_use]
 extern crate lazy_static;
-extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 #[macro_use]
@@ -14,7 +13,7 @@ pub mod types;
 #[cfg(test)]
 mod tests {
     use crate::expression::{eval, Expression, Parser, Rule};
-    use crate::types::{MathError, Token};
+    use crate::types::Token;
 
     #[test]
     fn number_parse() {
