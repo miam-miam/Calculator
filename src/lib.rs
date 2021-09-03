@@ -103,6 +103,10 @@ mod tests {
             Ok(Token::Integer(-55))
         );
         assert_eq!(
+            eval(Expression::parse(Rule::calculation, "-595.524e-1").unwrap()),
+            Ok(Token::fraction(-59, -1381, 2500))
+        );
+        assert_eq!(
             eval(Expression::parse(Rule::calculation, ".5e0").unwrap()),
             Ok(Token::fraction(0, 1, 2))
         );

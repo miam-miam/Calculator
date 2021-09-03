@@ -31,7 +31,6 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                 Rule::expr => eval(pair.into_inner()),
                 Rule::func => fn_eval(pair.into_inner()),
                 Rule::int => {
-                    // TODO do exp
                     let entire_int = pair.as_str();
                     let mut pairs = pair.into_inner();
                     let (integer, exponent) = (pairs.next().unwrap().as_str(), pairs.next());
@@ -72,7 +71,7 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                     }
                 }
                 Rule::dec => {
-                    let pair_str = pair.as_str();
+                    let entire_dec = pair.as_str();
                     let mut pairs = pair.into_inner();
                     let integer: &str;
                     let decimal: &str;
@@ -90,41 +89,90 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                         _ => unreachable!(),
                     }
                     let exponent = pairs.next();
-
-                    match exponent {
-                        Some(_) => {
-                            // TODO make it return fraction/integer if it can.
-                            match_string_to_float(pair_str)
-                        }
-                        None => match integer.parse::<i128>() {
-                            Ok(integer) => match decimal.parse::<i128>() {
-                                Ok(decimal_int) => match ten_to_the_power_of(decimal.len() as i128)
-                                {
-                                    None => match_string_to_float(pair_str),
-                                    Some(result) => {
-                                        let mut fraction = Fraction {
-                                            int: integer,
-                                            num: match integer {
-                                                0..=i128::MAX => decimal_int,
-                                                i128::MIN..=-1 => mul!(decimal_int, -1),
-                                            },
-                                            den: result,
-                                        };
-                                        match fraction.normalise() {
-                                            Err(MathError::InvalidFraction) => {
-                                                Ok(Token::Integer(fraction.int))
+                    match integer.parse::<i128>() {
+                        Ok(integer) => match decimal.parse::<i128>() {
+                            Ok(decimal_int) => match ten_to_the_power_of(decimal.len() as i128) {
+                                None => match_string_to_float(entire_dec),
+                                Some(result) => {
+                                    let mut fraction = Fraction {
+                                        int: integer,
+                                        num: match integer {
+                                            0..=i128::MAX => decimal_int,
+                                            i128::MIN..=-1 => mul!(
+                                                decimal_int,
+                                                -1,
+                                                match_string_to_float(entire_dec)
+                                            ),
+                                        },
+                                        den: result,
+                                    };
+                                    if let Some(exponent) = exponent {
+                                        match exponent.as_str().parse::<i128>() {
+                                            Ok(exp) => {
+                                                if exp > 0 {
+                                                    match ten_to_the_power_of(exp) {
+                                                        Some(val) => {
+                                                            fraction.int = mul!(
+                                                                fraction.int,
+                                                                val,
+                                                                match_string_to_float(entire_dec)
+                                                            );
+                                                            fraction.num = mul!(
+                                                                fraction.num,
+                                                                val,
+                                                                match_string_to_float(entire_dec)
+                                                            );
+                                                        }
+                                                        None => {
+                                                            return match_string_to_float(
+                                                                entire_dec,
+                                                            );
+                                                        }
+                                                    }
+                                                } else if exp < 0 {
+                                                    match ten_to_the_power_of(-exp) {
+                                                        Some(val) => {
+                                                            fraction.num = add!(
+                                                                fraction.num,
+                                                                mul!(
+                                                                    fraction.int,
+                                                                    fraction.den,
+                                                                    match_string_to_float(
+                                                                        entire_dec
+                                                                    )
+                                                                ),
+                                                                match_string_to_float(entire_dec)
+                                                            );
+                                                            fraction.den = mul!(fraction.den, val);
+                                                            fraction.int = 0;
+                                                        }
+                                                        None => {
+                                                            return match_string_to_float(
+                                                                entire_dec,
+                                                            );
+                                                        }
+                                                    }
+                                                }
                                             }
-                                            Err(MathError::Overflow) => {
-                                                match_string_to_float(pair_str)
+                                            Err(_) => {
+                                                return Err(MathError::DoubleOverflow);
                                             }
-                                            _ => Ok(Token::Fraction(fraction)),
                                         }
                                     }
-                                },
-                                Err(_) => match_string_to_float(pair_str),
+                                    match fraction.normalise() {
+                                        Err(MathError::InvalidFraction) => {
+                                            Ok(Token::Integer(fraction.int))
+                                        }
+                                        Err(MathError::Overflow) => {
+                                            match_string_to_float(entire_dec)
+                                        }
+                                        _ => Ok(Token::Fraction(fraction)),
+                                    }
+                                }
                             },
-                            Err(_) => match_string_to_float(pair_str),
+                            Err(_) => match_string_to_float(entire_dec),
                         },
+                        Err(_) => match_string_to_float(entire_dec),
                     }
                 }
                 _ => unreachable!(),
