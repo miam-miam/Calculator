@@ -32,12 +32,43 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
                 Rule::func => fn_eval(pair.into_inner()),
                 Rule::int => {
                     // TODO do exp
-                    let int_str = pair.as_str();
+                    let entire_int = pair.as_str();
                     let mut pairs = pair.into_inner();
-                    let (integer, _exponent) = (pairs.next().unwrap().as_str(), pairs.next());
+                    let (integer, exponent) = (pairs.next().unwrap().as_str(), pairs.next());
                     match integer.parse::<i128>() {
-                        Ok(result) => Ok(Token::Integer(result)),
-                        Err(_) => match_string_to_float(int_str),
+                        Ok(integer) => match exponent {
+                            Some(exponent) => match exponent.as_str().parse::<i128>() {
+                                Ok(0) => Ok(Token::Integer(integer)),
+                                Ok(exponent) if exponent > 0 => {
+                                    match ten_to_the_power_of(exponent) {
+                                        None => match_string_to_float(entire_int),
+                                        Some(val) => match integer.checked_mul(val) {
+                                            Some(int) => Ok(Token::Integer(int)),
+                                            None => match_string_to_float(entire_int),
+                                        },
+                                    }
+                                }
+                                Ok(exponent) if exponent < 0 => {
+                                    match ten_to_the_power_of(-exponent) {
+                                        None => match_string_to_float(entire_int),
+                                        Some(val) => {
+                                            let mut frac = Fraction::new(0, integer, val);
+                                            match frac.normalise() {
+                                                Ok(_) => Ok(Token::Fraction(frac)),
+                                                Err(MathError::InvalidFraction) => {
+                                                    Ok(Token::Integer(frac.int))
+                                                }
+                                                _ => unreachable!(),
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(_) => Err(MathError::DoubleOverflow),
+                                _ => unreachable!(),
+                            },
+                            None => Ok(Token::Integer(integer)),
+                        },
+                        Err(_) => match_string_to_float(entire_int),
                     }
                 }
                 Rule::dec => {
