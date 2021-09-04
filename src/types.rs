@@ -1,214 +1,156 @@
+use crate::number::try_add;
 use core::fmt;
-
 use gcd::Gcd;
 
-// Not adding Copy as will be using Vec
-#[derive(PartialEq, Clone)]
-pub enum Token {
+#[derive(PartialEq, Copy, Clone)]
+pub enum BasicToken {
     Integer(i128),
     Fraction(Fraction),
     SIntRoot(SRoot<i128>),
     SFracRoot(SRoot<Fraction>),
     CIntRoot(CRoot<i128>),
     CFracRoot(CRoot<Fraction>),
-    PiInteger(Pi<i128>),
-    PiFraction(Pi<Fraction>),
-    PiSIntRoot(Pi<SRoot<i128>>),
-    PiSFracRoot(Pi<SRoot<Fraction>>),
-    PiCIntRoot(Pi<CRoot<i128>>),
-    PiCFracRoot(Pi<CRoot<Fraction>>),
-    Combined(Vec<Token>),
     Double(f64),
 }
 
-impl Token {
+impl BasicToken {
     #[inline]
-    pub fn fraction(int: i128, num: i128, den: i128) -> Token {
-        Token::Fraction(Fraction { int, num, den })
+    pub fn fraction(int: i128, num: i128, den: i128) -> BasicToken {
+        BasicToken::Fraction(Fraction { int, num, den })
     }
     #[inline]
-    pub fn s_int_root(mul: i128, base: i128) -> Token {
-        Token::SIntRoot(SRoot { mul, base })
+    pub fn s_int_root(mul: i128, base: i128) -> BasicToken {
+        BasicToken::SIntRoot(SRoot { mul, base })
     }
     #[inline]
-    pub fn c_int_root(mul: i128, base: i128) -> Token {
-        Token::CIntRoot(CRoot { mul, base })
+    pub fn c_int_root(mul: i128, base: i128) -> BasicToken {
+        BasicToken::CIntRoot(CRoot { mul, base })
     }
     #[inline]
-    pub fn s_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
-        Token::SFracRoot(SRoot {
+    pub fn s_frac_root(int: i128, num: i128, den: i128, base: i128) -> BasicToken {
+        BasicToken::SFracRoot(SRoot {
             mul: Fraction { int, num, den },
             base,
         })
     }
     #[inline]
-    pub fn c_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
-        Token::CFracRoot(CRoot {
+    pub fn c_frac_root(int: i128, num: i128, den: i128, base: i128) -> BasicToken {
+        BasicToken::CFracRoot(CRoot {
             mul: Fraction { int, num, den },
             base,
         })
     }
     #[inline]
-    pub fn s_fraction_root(mul: Fraction, base: i128) -> Token {
-        Token::SFracRoot(SRoot { mul, base })
+    pub fn s_fraction_root(mul: Fraction, base: i128) -> BasicToken {
+        BasicToken::SFracRoot(SRoot { mul, base })
     }
     #[inline]
-    pub fn c_fraction_root(mul: Fraction, base: i128) -> Token {
-        Token::CFracRoot(CRoot { mul, base })
-    }
-    #[inline]
-    pub fn pi_integer(int: i128) -> Token {
-        Token::PiInteger(Pi { mul: int })
-    }
-    #[inline]
-    pub fn pi_fraction(int: i128, num: i128, den: i128) -> Token {
-        Token::PiFraction(Pi {
-            mul: Fraction { int, num, den },
-        })
-    }
-    #[inline]
-    pub fn pi_s_int_root(mul: i128, base: i128) -> Token {
-        Token::PiSIntRoot(Pi {
-            mul: SRoot { mul, base },
-        })
-    }
-    #[inline]
-    pub fn pi_c_int_root(mul: i128, base: i128) -> Token {
-        Token::PiCIntRoot(Pi {
-            mul: CRoot { mul, base },
-        })
-    }
-    #[inline]
-    pub fn pi_s_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
-        Token::PiSFracRoot(Pi {
-            mul: SRoot {
-                mul: Fraction { int, num, den },
-                base,
-            },
-        })
-    }
-    #[inline]
-    pub fn pi_c_frac_root(int: i128, num: i128, den: i128, base: i128) -> Token {
-        Token::PiCFracRoot(Pi {
-            mul: CRoot {
-                mul: Fraction { int, num, den },
-                base,
-            },
-        })
-    }
-    #[inline]
-    pub fn pi_s_fraction_root(mul: Fraction, base: i128) -> Token {
-        Token::PiSFracRoot(Pi {
-            mul: SRoot { mul, base },
-        })
-    }
-    #[inline]
-    pub fn pi_c_fraction_root(mul: Fraction, base: i128) -> Token {
-        Token::PiCFracRoot(Pi {
-            mul: CRoot { mul, base },
-        })
-    }
-
-    pub fn pi(&self) -> Result<Token, MathError> {
-        match *self {
-            Token::Integer(0) => Ok(Token::Integer(0)),
-            Token::Integer(i) => Ok(Token::pi_integer(i)),
-            Token::Fraction(i) => Ok(Token::PiFraction(Pi::new(i))),
-            Token::SIntRoot(i) => Ok(Token::PiSIntRoot(Pi::new(i))),
-            Token::SFracRoot(i) => Ok(Token::PiSFracRoot(Pi::new(i))),
-            Token::CIntRoot(i) => Ok(Token::PiCIntRoot(Pi::new(i))),
-            Token::CFracRoot(i) => Ok(Token::PiCFracRoot(Pi::new(i))),
-            Token::Double(i) => Ok(Token::Double(double_check!(i * std::f64::consts::PI))),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn normal(&self) -> Token {
-        match *self {
-            Token::PiInteger(i) => Token::Integer(i.mul),
-            Token::PiFraction(i) => Token::Fraction(i.mul),
-            Token::PiSIntRoot(i) => Token::SIntRoot(i.mul),
-            Token::PiSFracRoot(i) => Token::SFracRoot(i.mul),
-            Token::PiCIntRoot(i) => Token::CIntRoot(i.mul),
-            Token::PiCFracRoot(i) => Token::CFracRoot(i.mul),
-            _ => unreachable!(),
-        }
+    pub fn c_fraction_root(mul: Fraction, base: i128) -> BasicToken {
+        BasicToken::CFracRoot(CRoot { mul, base })
     }
 
     /// This function does not check if the f64 is valid as such it is recommended to check with double_check!() once the computations are finished.
     pub fn double(&self) -> f64 {
         match &*self {
-            Token::Integer(i) => *i as f64,
-            Token::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
-            Token::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
-            Token::SFracRoot(i) => {
+            BasicToken::Integer(i) => *i as f64,
+            BasicToken::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
+            BasicToken::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
+            BasicToken::SFracRoot(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
             }
-            Token::CIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
-            Token::CFracRoot(i) => {
+            BasicToken::CIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
+            BasicToken::CFracRoot(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
             }
-            Token::PiInteger(i) => i.mul as f64 * std::f64::consts::PI,
-            Token::PiFraction(i) => {
-                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * std::f64::consts::PI
-            }
-            Token::PiSIntRoot(i) => {
-                (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
-            }
-            Token::PiSFracRoot(i) => {
-                (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
-                    * (i.mul.base as f64).cbrt()
-                    * std::f64::consts::PI
-            }
-            Token::PiCIntRoot(i) => {
-                (i.mul.mul as f64) * (i.mul.base as f64).sqrt() * std::f64::consts::PI
-            }
-            Token::PiCFracRoot(i) => {
-                (i.mul.mul.int as f64 + i.mul.mul.num as f64 / i.mul.mul.den as f64)
-                    * (i.mul.base as f64).cbrt()
-                    * std::f64::consts::PI
-            }
-            Token::Combined(i) => i.iter().fold(0_f64, |acc, tok| acc + tok.double()),
-            Token::Double(i) => *i,
+            BasicToken::Double(i) => *i,
         }
     }
+    pub fn negate(self) -> Result<BasicToken, MathError> {
+        Ok(match self {
+            BasicToken::Integer(i) => BasicToken::Integer(mul!(i, -1)),
+            BasicToken::Fraction(i) => {
+                BasicToken::fraction(mul!(i.int, -1), mul!(i.num, -1), i.den)
+            }
+            BasicToken::SIntRoot(i) => BasicToken::s_int_root(mul!(i.mul, -1), i.base),
+            BasicToken::SFracRoot(i) => BasicToken::SFracRoot(SRoot::new(i.mul.negate()?, i.base)),
+            BasicToken::CIntRoot(i) => BasicToken::c_int_root(mul!(i.mul, -1), i.base),
+            BasicToken::CFracRoot(i) => BasicToken::CFracRoot(CRoot::new(i.mul.negate()?, i.base)),
+            BasicToken::Double(i) => BasicToken::Double(-i),
+        })
+    }
+}
 
-    pub fn is_pi(&self) -> bool {
+impl fmt::Debug for BasicToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Token::PiInteger(_)
-            | Token::PiFraction(_)
-            | Token::PiSIntRoot(_)
-            | Token::PiSFracRoot(_)
-            | Token::PiCIntRoot(_)
-            | Token::PiCFracRoot(_) => true,
-            _ => false,
+            BasicToken::Integer(i) => write!(f, "{}", i),
+            BasicToken::Fraction(fr) => write!(f, "{}", fr),
+            BasicToken::SIntRoot(r) => write!(f, "{}", r),
+            BasicToken::SFracRoot(r) => write!(f, "{}", r),
+            BasicToken::CIntRoot(r) => write!(f, "{}", r),
+            BasicToken::CFracRoot(r) => write!(f, "{}", r),
+            BasicToken::Double(d) => write!(f, "Double: {}", d),
         }
+    }
+}
+
+#[derive(PartialEq, Clone)]
+pub enum Token {
+    Basic(BasicToken),
+    Pi(BasicToken),
+    Combined(Combined),
+}
+
+impl Token {
+    #[inline]
+    pub fn combined(basic: Vec<BasicToken>, pi: Vec<BasicToken>) -> Token {
+        Token::Combined(Combined { basic, pi })
+    }
+    pub fn double(&self) -> f64 {
+        match self {
+            Token::Basic(x) => x.double(),
+            Token::Pi(x) => x.double() * std::f64::consts::PI,
+            Token::Combined(i) => {
+                i.basic.iter().fold(0_f64, |acc, tok| acc + tok.double())
+                    + i.pi.iter().fold(0_f64, |acc, tok| acc + tok.double()) * std::f64::consts::PI
+            }
+        }
+    }
+    pub fn negate(self) -> Result<Token, MathError> {
+        Ok(match self {
+            Token::Basic(x) => Token::Basic(x.negate()?),
+            Token::Pi(x) => Token::Pi(x.negate()?),
+            Token::Combined(mut x) => {
+                for tok in x.basic.iter_mut() {
+                    *tok = tok.negate()?;
+                }
+                for tok in x.pi.iter_mut() {
+                    *tok = tok.negate()?;
+                }
+                Token::Combined(x)
+            }
+        })
     }
 }
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Token::Integer(i) => write!(f, "Integer: {}", i),
-            Token::Fraction(fr) => write!(f, "Fraction: {}", fr),
-            Token::SIntRoot(r) => write!(f, "Sqrt: {}", r),
-            Token::SFracRoot(r) => write!(f, "Sqrt: {}", r),
-            Token::CIntRoot(r) => write!(f, "Cbrt: {}", r),
-            Token::CFracRoot(r) => write!(f, "Cbrt: {}", r),
-            Token::PiInteger(i) => write!(f, "PiInteger: {}", i),
-            Token::PiFraction(fr) => write!(f, "PiFraction: {}", fr),
-            Token::PiSIntRoot(r) => write!(f, "PiSqrt: {}", r),
-            Token::PiSFracRoot(r) => write!(f, "PiSqrt: {}", r),
-            Token::PiCIntRoot(r) => write!(f, "PiCbrt: {}", r),
-            Token::PiCFracRoot(r) => write!(f, "PiCbrt: {}", r),
+            Token::Basic(i) => write!(f, "{:?}", i),
+            Token::Pi(i) => write!(f, "π*({:?})", i),
             Token::Combined(v) => {
-                write!(f, "Combined: ")?;
-                for tok in v {
-                    write!(f, "{:?}, ", tok)?;
+                for (pos, tok) in v.basic.iter().enumerate() {
+                    if pos == 0 {
+                        write!(f, "{:?}", tok)?;
+                    } else {
+                        write!(f, " + {:?}", tok)?;
+                    }
+                }
+                for tok in v.pi.iter() {
+                    write!(f, " + π*({:?})", tok)?;
                 }
                 Ok(())
             }
-            Token::Double(d) => write!(f, "Double: {}", d),
         }
     }
 }
@@ -216,6 +158,7 @@ impl fmt::Debug for Token {
 #[derive(Debug, Eq, Copy, PartialEq, Clone)]
 pub enum MathError {
     None,
+    Combine,
     SyntaxError,
     Overflow,
     DoubleOverflow,
@@ -232,6 +175,7 @@ impl fmt::Display for MathError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             MathError::None => write!(f, "All good!"),
+            MathError::Combine => write!(f, "Should combine"),
             MathError::SyntaxError => write!(f, "Incorrect syntax"),
             MathError::Overflow => write!(f, "Overflow"),
             MathError::DoubleOverflow => write!(f, "Proper overflow"),
@@ -336,6 +280,12 @@ impl Fraction {
         self.int = 0;
         self.normalise()
     }
+
+    pub fn negate(mut self) -> Result<Fraction, MathError> {
+        self.num = mul!(self.num, -1);
+        self.int = mul!(self.int, -1);
+        Ok(self)
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -392,19 +342,88 @@ impl<T: fmt::Display> fmt::Display for CRoot<T> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct Pi<T> {
-    pub mul: T,
+#[derive(PartialEq, Clone)]
+pub struct Combined {
+    pub basic: Vec<BasicToken>,
+    pub pi: Vec<BasicToken>,
 }
 
-impl<T> Pi<T> {
-    pub fn new(mul: T) -> Pi<T> {
-        Pi { mul }
+impl Combined {
+    pub fn add_combined(mut self, tok: Token) -> Result<Combined, MathError> {
+        match tok {
+            Token::Basic(tok) => {
+                self.basic_add(tok)?;
+            }
+            Token::Pi(tok) => {
+                self.pi_add(tok)?;
+            }
+            Token::Combined(tokens) => {
+                for tok in tokens.basic {
+                    self.basic_add(tok)?;
+                }
+                for tok in tokens.pi {
+                    self.pi_add(tok)?;
+                }
+            }
+        }
+        Ok(self)
     }
-}
 
-impl<T: fmt::Display> fmt::Display for Pi<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "({})*π", self.mul)
+    pub fn negate(mut self) -> Result<Combined, MathError> {
+        for tok in self.basic.iter_mut() {
+            *tok = tok.negate()?;
+        }
+        for tok in self.pi.iter_mut() {
+            *tok = tok.negate()?;
+        }
+        Ok(self)
+    }
+
+    fn basic_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
+        for (pos, basic) in self.basic.iter().enumerate() {
+            match try_add((*basic, tok)) {
+                Err(MathError::Overflow) => {
+                    let double = double_check!(self
+                        .basic
+                        .iter()
+                        .fold(tok.double(), |acc, item| acc + item.double()));
+                    self.basic.clear();
+                    self.basic.push(BasicToken::Double(double));
+                    break;
+                }
+                Err(MathError::Combine) => {
+                    continue;
+                }
+                val => {
+                    self.basic.splice(pos..pos + 1, [val?]);
+                    break;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn pi_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
+        for (pos, basic) in self.pi.iter().enumerate() {
+            match try_add((*basic, tok)) {
+                Err(MathError::Overflow) => {
+                    let double = double_check!(self
+                        .pi
+                        .iter()
+                        .fold(tok.double(), |acc, item| acc + item.double()));
+                    self.pi.clear();
+                    self.pi.push(BasicToken::Double(double));
+                    break;
+                }
+                Err(MathError::Combine) => {
+                    continue;
+                }
+                val => {
+                    self.pi.splice(pos..pos + 1, [val?]);
+                    break;
+                }
+            }
+        }
+        Ok(())
     }
 }

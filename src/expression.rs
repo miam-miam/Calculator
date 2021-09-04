@@ -3,8 +3,9 @@ use pest::prec_climber::*;
 pub use pest::Parser;
 
 use crate::my_math::ten_to_the_power_of;
-use crate::number::{add, div, exp, mul, sub};
-use crate::types::{Fraction, MathError, Token};
+// use crate::number::{add, div, exp, mul, sub};
+use crate::number::{add, sub};
+use crate::types::{BasicToken, Fraction, MathError, Token};
 use std::cmp::Ordering;
 
 #[derive(Parser)]
@@ -35,11 +36,11 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
             match integer.parse::<i128>() {
                 Ok(integer) => match exponent {
                     Some(exponent) => match exponent.as_str().parse::<i128>() {
-                        Ok(0) => Ok(Token::Integer(integer)),
+                        Ok(0) => Ok(Token::Basic(BasicToken::Integer(integer))),
                         Ok(exponent) if exponent > 0 => match ten_to_the_power_of(exponent) {
                             None => match_string_to_float(entire_int),
                             Some(val) => match integer.checked_mul(val) {
-                                Some(int) => Ok(Token::Integer(int)),
+                                Some(int) => Ok(Token::Basic(BasicToken::Integer(int))),
                                 None => match_string_to_float(entire_int),
                             },
                         },
@@ -48,8 +49,8 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                             Some(val) => {
                                 let mut frac = Fraction::new(0, integer, val);
                                 match frac.normalise() {
-                                    Ok(_) => Ok(Token::Fraction(frac)),
-                                    Err(MathError::InvalidFraction) => Ok(Token::Integer(frac.int)),
+                                    Ok(_) => Ok(Token::Basic(BasicToken::Fraction(frac))),
+                                    Err(MathError::InvalidFraction) => Ok(Token::Basic(BasicToken::Integer(frac.int))),
                                     _ => unreachable!(),
                                 }
                             }
@@ -57,7 +58,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                         Err(_) => Err(MathError::DoubleOverflow),
                         _ => unreachable!(),
                     },
-                    None => Ok(Token::Integer(integer)),
+                    None => Ok(Token::Basic(BasicToken::Integer(integer))),
                 },
                 Err(_) => match_string_to_float(entire_int),
             }
@@ -143,9 +144,9 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                                 }
                             }
                             match fraction.normalise() {
-                                Err(MathError::InvalidFraction) => Ok(Token::Integer(fraction.int)),
+                                Err(MathError::InvalidFraction) => Ok(Token::Basic(BasicToken::Integer(fraction.int))),
                                 Err(MathError::Overflow) => match_string_to_float(entire_dec),
-                                _ => Ok(Token::Fraction(fraction)),
+                                _ => Ok(Token::Basic(BasicToken::Fraction(fraction))),
                             }
                         }
                     },
@@ -155,7 +156,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
             }
         }
         Rule::pi => token_eval(pair.into_inner().next().unwrap())?.pi(),
-        Rule::single_pi => Ok(Token::pi_integer(1)),
+        Rule::single_pi => Ok(Token::Basic(BasicToken::pi_integer(1))),
         _ => unreachable!(),
     }
 }
@@ -169,9 +170,9 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
         {
             Rule::add => add(lhs?, rhs?),
             Rule::subtract => sub(lhs?, rhs?),
-            Rule::multiply => mul(lhs?, rhs?),
-            Rule::divide => div(lhs?, rhs?),
-            Rule::power => exp(lhs?, rhs?),
+            // Rule::multiply => mul(lhs?, rhs?),
+            // Rule::divide => div(lhs?, rhs?),
+            // Rule::power => exp(lhs?, rhs?),
             _ => unreachable!(),
         },
     )
@@ -179,48 +180,43 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
 
 fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
     match function.next().unwrap().as_rule() {
-        Rule::sqrt => exp(
-            eval(function.next().unwrap().into_inner())?,
-            Token::fraction(0, 1, 2),
-        ),
-        Rule::cbrt => exp(
-            eval(function.next().unwrap().into_inner())?,
-            Token::fraction(0, 1, 3),
-        ),
-
-        Rule::square => exp(
-            eval(function.next().unwrap().into_inner())?,
-            Token::Integer(2),
-        ),
-        Rule::cube => exp(
-            eval(function.next().unwrap().into_inner())?,
-            Token::Integer(3),
-        ),
-        Rule::test => Ok(Token::Combined(
-            function
-                .map(|pair| eval(pair.into_inner()))
-                .collect::<Result<Vec<Token>, MathError>>()?,
-        )),
-        Rule::min => Ok(function
-            .try_fold(
-                (f64::INFINITY, Token::Integer(0)),
-                |acc: (f64, Token), pair: Pair<'_, Rule>| {
-                    let token = eval(pair.into_inner())?;
-                    let double = token.double();
-                    return Ok(if double < acc.0 { (double, token) } else { acc });
-                },
-            )?
-            .1),
-        Rule::max => Ok(function
-            .try_fold(
-                (f64::NEG_INFINITY, Token::Integer(0)),
-                |acc: (f64, Token), pair: Pair<'_, Rule>| {
-                    let token = eval(pair.into_inner())?;
-                    let double = token.double();
-                    return Ok(if double > acc.0 { (double, token) } else { acc });
-                },
-            )?
-            .1),
+        // Rule::sqrt => exp(
+        //     eval(function.next().unwrap().into_inner())?,
+        //     Token::Basic(BasicToken::fraction(0, 1, 2)),
+        // ),
+        // Rule::cbrt => exp(
+        //     eval(function.next().unwrap().into_inner())?,
+        //     Token::Basic(BasicToken::fraction(0, 1, 3)),
+        // ),
+        //
+        // Rule::square => exp(
+        //     eval(function.next().unwrap().into_inner())?,
+        //     Token::Basic(BasicToken::Integer(2)),
+        // ),
+        // Rule::cube => exp(
+        //     eval(function.next().unwrap().into_inner())?,
+        //     Token::Basic(BasicToken::Integer(3)),
+        // ),
+        // Rule::min => Ok(function
+        //     .try_fold(
+        //         (f64::INFINITY, Token::Basic(BasicToken::Integer(0))),
+        //         |acc: (f64, Token), pair: Pair<'_, Rule>| {
+        //             let token = eval(pair.into_inner())?;
+        //             let double = token.double();
+        //             return Ok(if double < acc.0 { (double, token) } else { acc });
+        //         },
+        //     )?
+        //     .1),
+        // Rule::max => Ok(function
+        //     .try_fold(
+        //         (f64::NEG_INFINITY, Token::Basic(BasicToken::Integer(0))),
+        //         |acc: (f64, Token), pair: Pair<'_, Rule>| {
+        //             let token = eval(pair.into_inner())?;
+        //             let double = token.double();
+        //             return Ok(if double > acc.0 { (double, token) } else { acc });
+        //         },
+        //     )?
+        //     .1),
         _ => unreachable!(),
     }
 }
@@ -228,7 +224,9 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
 #[inline]
 fn match_string_to_float(string: &str) -> Result<Token, MathError> {
     match string.parse::<f64>() {
-        Ok(i) if i != f64::INFINITY && i != f64::NEG_INFINITY => Ok(Token::Double(i)),
+        Ok(i) if i != f64::INFINITY && i != f64::NEG_INFINITY => {
+            Ok(Token::Basic(BasicToken::Double(i)))
+        }
         _ => Err(MathError::DoubleOverflow),
     }
 }

@@ -1,191 +1,212 @@
 use crate::my_math::factorise;
-use crate::types::{CRoot, Fraction, MathError, SRoot, Token};
+use crate::types::{BasicToken, CRoot, Fraction, MathError, SRoot, Token};
 
-fn try_add(tup: (&Token, &Token)) -> Result<Token, MathError> {
+pub(crate) fn try_add(tup: (BasicToken, BasicToken)) -> Result<BasicToken, MathError> {
     match tup {
-        (Token::Fraction(mut la), Token::Fraction(ra)) => match la.add(&ra) {
-            Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+        (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.add(&ra) {
+            Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
             Err(x) => Err(x),
-            _ => Ok(Token::Fraction(la)),
+            _ => Ok(BasicToken::Fraction(la)),
         },
-        (Token::Fraction(mut la), Token::Integer(ra))
-        | (Token::Integer(ra), Token::Fraction(mut la)) => {
-            la.int = add!(la.int, *ra);
-            Ok(Token::Fraction(la))
+        (BasicToken::Fraction(mut la), BasicToken::Integer(ra))
+        | (BasicToken::Integer(ra), BasicToken::Fraction(mut la)) => {
+            la.int = add!(la.int, ra);
+            Ok(BasicToken::Fraction(la))
         }
-        (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(add!(la, *ra))),
-        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::Integer(la), BasicToken::Integer(ra)) => Ok(BasicToken::Integer(add!(la, ra))),
+        (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul = add!(la.mul, ra.mul);
-            Ok(Token::SIntRoot(la))
+            Ok(BasicToken::SIntRoot(la))
         }
-        (Token::SFracRoot(mut la), Token::SIntRoot(ra))
-        | (Token::SIntRoot(ra), Token::SFracRoot(mut la))
+        (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra))
+        | (BasicToken::SIntRoot(ra), BasicToken::SFracRoot(mut la))
             if la.base == ra.base =>
         {
             la.mul.int = add!(la.mul.int, ra.mul);
-            Ok(Token::SFracRoot(la))
+            Ok(BasicToken::SFracRoot(la))
         }
-        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) if la.base == ra.base => {
+        (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
             match la.mul.add(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::SFracRoot(la)),
+                _ => Ok(BasicToken::SFracRoot(la)),
             }
         }
-        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = add!(la.mul, ra.mul);
-            Ok(Token::CIntRoot(la))
+            Ok(BasicToken::CIntRoot(la))
         }
-        (Token::CFracRoot(mut la), Token::CIntRoot(ra))
-        | (Token::CIntRoot(ra), Token::CFracRoot(mut la))
+        (BasicToken::CFracRoot(mut la), BasicToken::CIntRoot(ra))
+        | (BasicToken::CIntRoot(ra), BasicToken::CFracRoot(mut la))
             if la.base == ra.base =>
         {
             la.mul.int = add!(la.mul.int, ra.mul);
-            Ok(Token::CFracRoot(la))
+            Ok(BasicToken::CFracRoot(la))
         }
-        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) if la.base == ra.base => {
+        (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
             match la.mul.add(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::CFracRoot(la)),
+                _ => Ok(BasicToken::CFracRoot(la)),
             }
         }
-        _ => Err(MathError::Overflow),
+        (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
+        _ => Err(MathError::Combine),
     }
 }
 
 pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    if l_number.is_pi() && r_number.is_pi() {
-        match try_add((&l_number.normal(), &r_number.normal())) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-                (l_number.double() + r_number.double()) * std::f64::consts::PI
-            ))),
-            value => value?.pi(),
+    match (l_number, r_number) {
+        (Token::Pi(l), Token::Pi(r)) => match try_add((l, r)) {
+            Err(MathError::Overflow) => Ok(Token::Basic(BasicToken::Double(double_check!(
+                (l.double() + r.double()) * std::f64::consts::PI
+            )))),
+            Err(MathError::Combine) => Ok(Token::combined(vec![], vec![l, r])),
+            value => Ok(Token::Pi(value?)),
+        },
+        (Token::Basic(l), Token::Basic(r)) => match try_add((l, r)) {
+            Err(MathError::Overflow) => Ok(Token::Basic(BasicToken::Double(double_check!(
+                l.double() + r.double()
+            )))),
+            Err(MathError::Combine) => Ok(Token::combined(vec![l, r], vec![])),
+            value => Ok(Token::Basic(value?)),
+        },
+        (Token::Combined(l), r) | (r, Token::Combined(l)) => {
+            Ok(Token::Combined(l.add_combined(r)?))
         }
-    } else {
-        match try_add((&l_number, &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-                l_number.double() + r_number.double()
-            ))),
-            value => value,
+        (Token::Basic(basic), Token::Pi(pi)) | (Token::Pi(pi), Token::Basic(basic)) => {
+            Ok(Token::combined(vec![basic], vec![pi]))
         }
     }
 }
 
-fn try_sub(tup: (&Token, &Token)) -> Result<Token, MathError> {
+fn try_sub(tup: (BasicToken, BasicToken)) -> Result<BasicToken, MathError> {
     match tup {
-        (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(sub!(la, *ra))),
-        (Token::Fraction(mut la), Token::Integer(ra)) => {
-            la.int = sub!(la.int, *ra);
-            Ok(Token::Fraction(la))
+        (BasicToken::Integer(la), BasicToken::Integer(ra)) => Ok(BasicToken::Integer(sub!(la, ra))),
+        (BasicToken::Fraction(mut la), BasicToken::Integer(ra)) => {
+            la.int = sub!(la.int, ra);
+            Ok(BasicToken::Fraction(la))
         }
-        (Token::Integer(la), Token::Fraction(mut ra)) => {
+        (BasicToken::Integer(la), BasicToken::Fraction(mut ra)) => {
             ra.int = sub!(la, ra.int);
             ra.num = mul!(ra.num, -1);
-            Ok(Token::Fraction(ra))
+            Ok(BasicToken::Fraction(ra))
         }
-        (Token::Fraction(mut la), Token::Fraction(ra)) => match la.sub(&ra) {
-            Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+        (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.sub(&ra) {
+            Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
             Err(x) => Err(x),
-            _ => Ok(Token::Fraction(la)),
+            _ => Ok(BasicToken::Fraction(la)),
         },
-        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
-            Ok(Token::SIntRoot(la))
+            Ok(BasicToken::SIntRoot(la))
         }
-        (Token::SFracRoot(mut la), Token::SIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul.int = sub!(la.mul.int, ra.mul);
-            Ok(Token::SFracRoot(la))
+            Ok(BasicToken::SFracRoot(la))
         }
-        (Token::SIntRoot(la), Token::SFracRoot(mut ra)) if la.base == ra.base => {
+        (BasicToken::SIntRoot(la), BasicToken::SFracRoot(mut ra)) if la.base == ra.base => {
             ra.mul.int = sub!(la.mul, ra.mul.int);
             ra.mul.num = mul!(ra.mul.num, -1);
-            Ok(Token::SFracRoot(ra))
+            Ok(BasicToken::SFracRoot(ra))
         }
-        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) if la.base == ra.base => {
+        (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
             match la.mul.sub(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::SFracRoot(la)),
+                _ => Ok(BasicToken::SFracRoot(la)),
             }
         }
-        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
-            Ok(Token::CIntRoot(la))
+            Ok(BasicToken::CIntRoot(la))
         }
-        (Token::CFracRoot(mut la), Token::CIntRoot(ra)) if la.base == ra.base => {
+        (BasicToken::CFracRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul.int = sub!(la.mul.int, ra.mul);
-            Ok(Token::CFracRoot(la))
+            Ok(BasicToken::CFracRoot(la))
         }
-        (Token::CIntRoot(la), Token::CFracRoot(mut ra)) if la.base == ra.base => {
+        (BasicToken::CIntRoot(la), BasicToken::CFracRoot(mut ra)) if la.base == ra.base => {
             ra.mul.int = sub!(la.mul, ra.mul.int);
             ra.mul.num = mul!(ra.mul.num, -1);
-            Ok(Token::CFracRoot(ra))
+            Ok(BasicToken::CFracRoot(ra))
         }
-        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) if la.base == ra.base => {
+        (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
             match la.mul.sub(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::CFracRoot(la)),
+                _ => Ok(BasicToken::CFracRoot(la)),
             }
         }
-        _ => Err(MathError::Overflow),
+        (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
+        _ => Err(MathError::Combine),
     }
 }
 
 pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
-    if l_number.is_pi() && r_number.is_pi() {
-        match try_sub((&l_number.normal(), &r_number.normal())) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-                (l_number.double() - r_number.double()) * std::f64::consts::PI
-            ))),
-            value => value?.pi(),
+    match (l_number, r_number) {
+        (Token::Pi(l), Token::Pi(r)) => match try_sub((l, r)) {
+            Err(MathError::Overflow) => Ok(Token::Basic(BasicToken::Double(double_check!(
+                (l.double() - r.double()) * std::f64::consts::PI
+            )))),
+            Err(MathError::Combine) => Ok(Token::combined(vec![], vec![l, r.negate()?])),
+            value => Ok(Token::Pi(value?)),
+        },
+        (Token::Basic(l), Token::Basic(r)) => match try_sub((l, r)) {
+            Err(MathError::Overflow) => Ok(Token::Basic(BasicToken::Double(double_check!(
+                l.double() - r.double()
+            )))),
+            Err(MathError::Combine) => Ok(Token::combined(vec![l, r.negate()?], vec![])),
+            value => Ok(Token::Basic(value?)),
+        },
+        (Token::Combined(l), r) => Ok(Token::Combined(l.add_combined(r.negate()?)?)),
+        (l, Token::Combined(r)) => Ok(Token::Combined(r.negate()?.add_combined(l)?)),
+        (Token::Basic(basic), Token::Pi(pi)) => {
+            Ok(Token::combined(vec![basic], vec![pi.negate()?]))
         }
-    } else {
-        match try_sub((&l_number, &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
-                l_number.double() - r_number.double()
-            ))),
-            value => value,
+        (Token::Pi(pi), Token::Basic(basic)) => {
+            Ok(Token::combined(vec![basic.negate()?], vec![pi]))
         }
     }
 }
 
-fn try_mul(tup: (&Token, &Token)) -> Result<Token, MathError> {
+/*
+fn try_mul(tup: (&BasicToken, &BasicToken)) -> Result<BasicToken, MathError> {
     match tup {
         // a*0 = 0
-        (Token::Integer(0), _) | (_, Token::Integer(0)) => Ok(Token::Integer(0)),
+        (BasicToken::Integer(0), _) | (_, BasicToken::Integer(0)) => Ok(BasicToken::Integer(0)),
 
-        (Token::Fraction(mut la), Token::Fraction(ra)) => match la.mul(&ra) {
-            Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+        (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.mul(&ra) {
+            Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
             Err(x) => Err(x),
-            _ => Ok(Token::Fraction(la)),
+            _ => Ok(BasicToken::Fraction(la)),
         },
-        (Token::Fraction(mut la), Token::Integer(ra))
-        | (Token::Integer(ra), Token::Fraction(mut la)) => {
+        (BasicToken::Fraction(mut la), BasicToken::Integer(ra))
+        | (BasicToken::Integer(ra), BasicToken::Fraction(mut la)) => {
             la.int = mul!(la.int, *ra);
             la.num = mul!(la.num, *ra);
             match la.normalise() {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::Fraction(la)),
+                _ => Ok(BasicToken::Fraction(la)),
             }
         }
-        (Token::Integer(la), Token::Integer(ra)) => Ok(Token::Integer(mul!(la, *ra))),
-        (Token::SIntRoot(mut la), Token::SIntRoot(ra)) => {
+        (BasicToken::Integer(la), BasicToken::Integer(ra)) => {
+            Ok(BasicToken::Integer(mul!(la, *ra)))
+        }
+        (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) => {
             la.mul = mul!(la.mul, ra.mul);
             let res = factorise(mul!(la.base, ra.base), true);
             la.mul = mul!(la.mul, res.outside);
             match res.inside {
-                1 => Ok(Token::Integer(la.mul)),
+                1 => Ok(BasicToken::Integer(la.mul)),
                 _ => {
                     la.base = res.inside;
-                    Ok(Token::SIntRoot(la))
+                    Ok(BasicToken::SIntRoot(la))
                 }
             }
         }
-        (Token::SFracRoot(mut la), Token::SIntRoot(ra))
-        | (Token::SIntRoot(ra), Token::SFracRoot(mut la)) => {
+        (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra))
+        | (BasicToken::SIntRoot(ra), BasicToken::SFracRoot(mut la)) => {
             la.mul.int = mul!(la.mul.int, ra.mul);
             la.mul.num = mul!(la.mul.num, ra.mul);
             let res = factorise(mul!(la.base, ra.base), true);
@@ -193,45 +214,45 @@ fn try_mul(tup: (&Token, &Token)) -> Result<Token, MathError> {
             la.mul.num = mul!(la.mul.num, res.outside);
             match res.inside {
                 1 => match la.mul.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(la.mul)),
+                    _ => Ok(BasicToken::Fraction(la.mul)),
                 },
                 _ => match la.mul.normalise() {
                     Err(MathError::InvalidFraction) => {
-                        Ok(Token::s_int_root(la.mul.int, res.inside))
+                        Ok(BasicToken::s_int_root(la.mul.int, res.inside))
                     }
                     Err(x) => Err(x),
-                    _ => Ok(Token::s_fraction_root(la.mul, res.inside)),
+                    _ => Ok(BasicToken::s_fraction_root(la.mul, res.inside)),
                 },
             }
         }
-        (Token::SFracRoot(mut la), Token::SFracRoot(ra)) => match la.mul.mul(&ra.mul) {
+        (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(ra)) => match la.mul.mul(&ra.mul) {
             Err(MathError::InvalidFraction) => {
                 let res = factorise(mul!(la.base, ra.base), true);
                 la.mul.int = mul!(la.mul.int, res.outside);
                 match res.inside {
-                    1 => Ok(Token::Integer(la.mul.int)),
-                    _ => Ok(Token::s_int_root(la.mul.int, res.inside)),
+                    1 => Ok(BasicToken::Integer(la.mul.int)),
+                    _ => Ok(BasicToken::s_int_root(la.mul.int, res.inside)),
                 }
             }
             Err(x) => Err(x),
-            _ => Ok(Token::SFracRoot(la)),
+            _ => Ok(BasicToken::SFracRoot(la)),
         },
-        (Token::CIntRoot(mut la), Token::CIntRoot(ra)) => {
+        (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) => {
             la.mul = mul!(la.mul, ra.mul);
             let res = factorise(mul!(la.base, ra.base), false);
             la.mul = mul!(la.mul, res.outside);
             match res.inside {
-                1 => Ok(Token::Integer(la.mul)),
+                1 => Ok(BasicToken::Integer(la.mul)),
                 _ => {
                     la.base = res.inside;
-                    Ok(Token::CIntRoot(la))
+                    Ok(BasicToken::CIntRoot(la))
                 }
             }
         }
-        (Token::CFracRoot(mut la), Token::CIntRoot(ra))
-        | (Token::CIntRoot(ra), Token::CFracRoot(mut la)) => {
+        (BasicToken::CFracRoot(mut la), BasicToken::CIntRoot(ra))
+        | (BasicToken::CIntRoot(ra), BasicToken::CFracRoot(mut la)) => {
             la.mul.int = mul!(la.mul.int, ra.mul);
             la.mul.num = mul!(la.mul.num, ra.mul);
             let res = factorise(mul!(la.base, ra.base), false);
@@ -239,31 +260,31 @@ fn try_mul(tup: (&Token, &Token)) -> Result<Token, MathError> {
             la.mul.num = mul!(la.mul.num, res.outside);
             match res.inside {
                 1 => match la.mul.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.mul.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(la.mul)),
+                    _ => Ok(BasicToken::Fraction(la.mul)),
                 },
                 _ => match la.mul.normalise() {
                     Err(MathError::InvalidFraction) => {
-                        Ok(Token::c_int_root(la.mul.int, res.inside))
+                        Ok(BasicToken::c_int_root(la.mul.int, res.inside))
                     }
                     Err(x) => Err(x),
-                    _ => Ok(Token::c_fraction_root(la.mul, res.inside)),
+                    _ => Ok(BasicToken::c_fraction_root(la.mul, res.inside)),
                 },
             }
         }
-        (Token::CFracRoot(mut la), Token::CFracRoot(ra)) => {
+        (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(ra)) => {
             let res = factorise(mul!(la.base, ra.base), false);
             la.mul.int = mul!(la.mul.int, res.outside);
             match la.mul.mul(&ra.mul) {
                 Err(MathError::InvalidFraction) => match res.inside {
-                    1 => Ok(Token::Integer(la.mul.int)),
-                    _ => Ok(Token::c_int_root(la.mul.int, res.inside)),
+                    1 => Ok(BasicToken::Integer(la.mul.int)),
+                    _ => Ok(BasicToken::c_int_root(la.mul.int, res.inside)),
                 },
                 Err(x) => Err(x),
                 _ => match res.inside {
-                    1 => Ok(Token::Fraction(la.mul)),
-                    _ => Ok(Token::c_fraction_root(la.mul, res.inside)),
+                    1 => Ok(BasicToken::Fraction(la.mul)),
+                    _ => Ok(BasicToken::c_fraction_root(la.mul, res.inside)),
                 },
             }
         }
@@ -274,25 +295,25 @@ fn try_mul(tup: (&Token, &Token)) -> Result<Token, MathError> {
 pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match (l_number.is_pi(), r_number.is_pi()) {
         (true, true) => match (&l_number, &r_number) {
-            (Token::Integer(0), _) | (_, Token::Integer(0)) => Ok(Token::Integer(0)),
-            _ => Ok(Token::Double(double_check!(
+            (BasicToken::Integer(0), _) | (_, BasicToken::Integer(0)) => Ok(BasicToken::Integer(0)),
+            _ => Ok(BasicToken::Double(double_check!(
                 l_number.double() * r_number.double()
             ))),
         },
         (true, false) => match try_mul((&l_number.normal(), &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() * r_number.double()
             ))),
             value => value?.pi(),
         },
         (false, true) => match try_mul((&l_number, &r_number.normal())) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() * r_number.double()
             ))),
             value => value?.pi(),
         },
         (false, false) => match try_mul((&l_number, &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() * r_number.double()
             ))),
             value => value,
@@ -300,71 +321,71 @@ pub fn mul(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     }
 }
 
-fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
+fn try_div(tup: (&BasicToken, &BasicToken)) -> Result<BasicToken, MathError> {
     {
         match tup {
             // Check if zero.
-            (_, Token::Integer(0)) => Err(MathError::DivisionByZero),
-            (_, Token::Double(a)) if !a.is_normal() => Err(MathError::DivisionByZero),
+            (_, BasicToken::Integer(0)) => Err(MathError::DivisionByZero),
+            (_, BasicToken::Double(a)) if !a.is_normal() => Err(MathError::DivisionByZero),
 
             // 0/a = 0
-            (Token::Integer(0), _) => Ok(Token::Integer(0)),
+            (BasicToken::Integer(0), _) => Ok(BasicToken::Integer(0)),
 
-            (Token::Integer(la), Token::Integer(ra)) => {
+            (BasicToken::Integer(la), BasicToken::Integer(ra)) => {
                 let mut res = Fraction {
                     int: 0,
                     num: *la,
                     den: *ra,
                 };
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(res.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(res)),
+                    _ => Ok(BasicToken::Fraction(res)),
                 }
             }
-            (Token::Fraction(mut la), Token::Integer(ra)) => {
+            (BasicToken::Fraction(mut la), BasicToken::Integer(ra)) => {
                 la.num = add!(la.num, mul!(la.int, la.den));
                 la.den = mul!(la.den, *ra);
                 la.int = 0;
                 match la.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(la)),
+                    _ => Ok(BasicToken::Fraction(la)),
                 }
             }
-            (Token::Integer(la), Token::Fraction(mut ra)) => {
+            (BasicToken::Integer(la), BasicToken::Fraction(mut ra)) => {
                 let old_num = ra.num;
                 ra.num = mul!(la, ra.den);
                 ra.den = add!(old_num, mul!(ra.den, ra.int));
                 ra.int = 0;
                 match ra.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(ra.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(ra.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(ra)),
+                    _ => Ok(BasicToken::Fraction(ra)),
                 }
             }
-            (Token::Fraction(mut la), Token::Fraction(ra)) => match la.div(&ra) {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(la.int)),
+            (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.div(&ra) {
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::Fraction(la)),
+                _ => Ok(BasicToken::Fraction(la)),
             },
-            (Token::SIntRoot(la), Token::SIntRoot(ra)) => {
+            (BasicToken::SIntRoot(la), BasicToken::SIntRoot(ra)) => {
                 let mut frac = Fraction::new(0, la.mul, mul!(ra.mul, ra.base));
                 let res = factorise(mul!(la.base, ra.base), true);
                 frac.num = mul!(res.outside, frac.num);
                 match frac.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(frac.int)),
-                        _ => Ok(Token::SIntRoot(SRoot::new(frac.int, res.inside))),
+                        1 => Ok(BasicToken::Integer(frac.int)),
+                        _ => Ok(BasicToken::SIntRoot(SRoot::new(frac.int, res.inside))),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(frac)),
-                        _ => Ok(Token::SFracRoot(SRoot::new(frac, res.inside))),
+                        1 => Ok(BasicToken::Fraction(frac)),
+                        _ => Ok(BasicToken::SFracRoot(SRoot::new(frac, res.inside))),
                     },
                 }
             }
-            (Token::SFracRoot(mut la), Token::SIntRoot(ra)) => {
+            (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra)) => {
                 la.mul.num = add!(la.mul.num, mul!(la.mul.int, la.mul.den));
                 la.mul.den = mul!(mul!(la.mul.den, ra.mul), ra.base);
                 la.mul.int = 0;
@@ -372,17 +393,17 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 la.mul.num = mul!(la.mul.num, res.outside);
                 match la.mul.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(la.mul.int)),
-                        _ => Ok(Token::SIntRoot(SRoot::new(la.mul.int, res.inside))),
+                        1 => Ok(BasicToken::Integer(la.mul.int)),
+                        _ => Ok(BasicToken::SIntRoot(SRoot::new(la.mul.int, res.inside))),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(la.mul)),
-                        _ => Ok(Token::SFracRoot(SRoot::new(la.mul, res.inside))),
+                        1 => Ok(BasicToken::Fraction(la.mul)),
+                        _ => Ok(BasicToken::SFracRoot(SRoot::new(la.mul, res.inside))),
                     },
                 }
             }
-            (Token::SIntRoot(la), Token::SFracRoot(ra)) => {
+            (BasicToken::SIntRoot(la), BasicToken::SFracRoot(ra)) => {
                 let mut frac = Fraction::new(
                     0,
                     mul!(la.mul, ra.mul.den),
@@ -392,17 +413,17 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 frac.num = mul!(frac.num, res.outside);
                 match frac.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(frac.int)),
-                        _ => Ok(Token::SIntRoot(SRoot::new(frac.int, res.inside))),
+                        1 => Ok(BasicToken::Integer(frac.int)),
+                        _ => Ok(BasicToken::SIntRoot(SRoot::new(frac.int, res.inside))),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(frac)),
-                        _ => Ok(Token::SFracRoot(SRoot::new(frac, res.inside))),
+                        1 => Ok(BasicToken::Fraction(frac)),
+                        _ => Ok(BasicToken::SFracRoot(SRoot::new(frac, res.inside))),
                     },
                 }
             }
-            (Token::SFracRoot(mut la), Token::SFracRoot(mut ra)) => {
+            (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(mut ra)) => {
                 ra.mul.num = mul!(ra.mul.num, ra.base);
                 ra.mul.int = mul!(ra.mul.int, ra.base);
                 match ra.mul.normalise() {
@@ -414,13 +435,13 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                         la.mul.num = mul!(la.mul.num, res.outside);
                         match la.mul.normalise() {
                             Err(MathError::InvalidFraction) => match res.inside {
-                                1 => Ok(Token::Integer(la.mul.int)),
-                                _ => Ok(Token::s_int_root(la.mul.int, res.inside)),
+                                1 => Ok(BasicToken::Integer(la.mul.int)),
+                                _ => Ok(BasicToken::s_int_root(la.mul.int, res.inside)),
                             },
                             Err(x) => Err(x),
                             _ => match res.inside {
-                                1 => Ok(Token::Fraction(la.mul)),
-                                _ => Ok(Token::s_fraction_root(la.mul, res.inside)),
+                                1 => Ok(BasicToken::Fraction(la.mul)),
+                                _ => Ok(BasicToken::s_fraction_root(la.mul, res.inside)),
                             },
                         }
                     }
@@ -429,10 +450,11 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                         let res = factorise(mul!(la.base, ra.base), true);
                         match la.mul.div(&ra.mul) {
                             Err(MathError::InvalidFraction) => match res.inside {
-                                1 => Ok(Token::Integer(mul!(la.mul.int, res.outside))),
-                                _ => {
-                                    Ok(Token::s_int_root(mul!(la.mul.int, res.outside), res.inside))
-                                }
+                                1 => Ok(BasicToken::Integer(mul!(la.mul.int, res.outside))),
+                                _ => Ok(BasicToken::s_int_root(
+                                    mul!(la.mul.int, res.outside),
+                                    res.inside,
+                                )),
                             },
                             Err(x) => Err(x),
                             _ => {
@@ -440,13 +462,13 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                                 la.mul.int = mul!(la.mul.int, res.outside);
                                 match la.mul.normalise() {
                                     Err(MathError::InvalidFraction) => match res.inside {
-                                        1 => Ok(Token::Integer(la.mul.int)),
-                                        _ => Ok(Token::s_int_root(la.mul.int, res.inside)),
+                                        1 => Ok(BasicToken::Integer(la.mul.int)),
+                                        _ => Ok(BasicToken::s_int_root(la.mul.int, res.inside)),
                                     },
                                     Err(x) => Err(x),
                                     _ => match res.inside {
-                                        1 => Ok(Token::Fraction(la.mul)),
-                                        _ => Ok(Token::s_fraction_root(la.mul, res.inside)),
+                                        1 => Ok(BasicToken::Fraction(la.mul)),
+                                        _ => Ok(BasicToken::s_fraction_root(la.mul, res.inside)),
                                     },
                                 }
                             }
@@ -454,23 +476,23 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                     }
                 }
             }
-            (Token::CIntRoot(la), Token::CIntRoot(ra)) => {
+            (BasicToken::CIntRoot(la), BasicToken::CIntRoot(ra)) => {
                 let mut frac = Fraction::new(0, la.mul, mul!(ra.mul, mul!(ra.base, ra.base)));
                 let res = factorise(mul!(la.base, mul!(ra.base, ra.base)), false);
                 frac.num = mul!(res.outside, frac.num);
                 match frac.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(frac.int)),
-                        _ => Ok(Token::c_int_root(frac.int, res.inside)),
+                        1 => Ok(BasicToken::Integer(frac.int)),
+                        _ => Ok(BasicToken::c_int_root(frac.int, res.inside)),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(frac)),
-                        _ => Ok(Token::c_fraction_root(frac, res.inside)),
+                        1 => Ok(BasicToken::Fraction(frac)),
+                        _ => Ok(BasicToken::c_fraction_root(frac, res.inside)),
                     },
                 }
             }
-            (Token::CFracRoot(la), Token::CIntRoot(ra)) => {
+            (BasicToken::CFracRoot(la), BasicToken::CIntRoot(ra)) => {
                 let mut frac = Fraction::new(
                     0,
                     add!(la.mul.num, mul!(la.mul.int, la.mul.den)),
@@ -480,17 +502,17 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 frac.num = mul!(frac.num, res.outside);
                 match frac.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(frac.int)),
-                        _ => Ok(Token::c_int_root(frac.int, res.inside)),
+                        1 => Ok(BasicToken::Integer(frac.int)),
+                        _ => Ok(BasicToken::c_int_root(frac.int, res.inside)),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(frac)),
-                        _ => Ok(Token::c_fraction_root(frac, res.inside)),
+                        1 => Ok(BasicToken::Fraction(frac)),
+                        _ => Ok(BasicToken::c_fraction_root(frac, res.inside)),
                     },
                 }
             }
-            (Token::CIntRoot(la), Token::CFracRoot(ra)) => {
+            (BasicToken::CIntRoot(la), BasicToken::CFracRoot(ra)) => {
                 let mut frac = Fraction::new(
                     0,
                     mul!(la.mul, ra.mul.den),
@@ -500,17 +522,17 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 frac.num = mul!(frac.num, res.outside);
                 match frac.normalise() {
                     Err(MathError::InvalidFraction) => match res.inside {
-                        1 => Ok(Token::Integer(frac.int)),
-                        _ => Ok(Token::c_int_root(frac.int, res.inside)),
+                        1 => Ok(BasicToken::Integer(frac.int)),
+                        _ => Ok(BasicToken::c_int_root(frac.int, res.inside)),
                     },
                     Err(x) => Err(x),
                     _ => match res.inside {
-                        1 => Ok(Token::Fraction(frac)),
-                        _ => Ok(Token::c_fraction_root(frac, res.inside)),
+                        1 => Ok(BasicToken::Fraction(frac)),
+                        _ => Ok(BasicToken::c_fraction_root(frac, res.inside)),
                     },
                 }
             }
-            (Token::CFracRoot(mut la), Token::CFracRoot(mut ra)) => {
+            (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(mut ra)) => {
                 ra.mul.num = mul!(ra.mul.num, ra.base);
                 ra.mul.int = mul!(ra.mul.int, ra.base);
                 match ra.mul.normalise() {
@@ -522,13 +544,13 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                         la.mul.num = mul!(la.mul.num, res.outside);
                         match la.mul.normalise() {
                             Err(MathError::InvalidFraction) => match res.inside {
-                                1 => Ok(Token::Integer(la.mul.int)),
-                                _ => Ok(Token::c_int_root(la.mul.int, res.inside)),
+                                1 => Ok(BasicToken::Integer(la.mul.int)),
+                                _ => Ok(BasicToken::c_int_root(la.mul.int, res.inside)),
                             },
                             Err(x) => Err(x),
                             _ => match res.inside {
-                                1 => Ok(Token::Fraction(la.mul)),
-                                _ => Ok(Token::c_fraction_root(la.mul, res.inside)),
+                                1 => Ok(BasicToken::Fraction(la.mul)),
+                                _ => Ok(BasicToken::c_fraction_root(la.mul, res.inside)),
                             },
                         }
                     }
@@ -537,8 +559,8 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                         let res = factorise(mul!(la.base, ra.base), true);
                         match la.mul.div(&ra.mul) {
                             Err(MathError::InvalidFraction) => match res.inside {
-                                1 => Ok(Token::Integer(mul!(la.mul.int, res.outside))),
-                                _ => Ok(Token::CIntRoot(CRoot::new(
+                                1 => Ok(BasicToken::Integer(mul!(la.mul.int, res.outside))),
+                                _ => Ok(BasicToken::CIntRoot(CRoot::new(
                                     mul!(la.mul.int, res.outside),
                                     res.inside,
                                 ))),
@@ -549,13 +571,13 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
                                 la.mul.int = mul!(la.mul.int, res.outside);
                                 match la.mul.normalise() {
                                     Err(MathError::InvalidFraction) => match res.inside {
-                                        1 => Ok(Token::Integer(la.mul.int)),
-                                        _ => Ok(Token::c_int_root(la.mul.int, res.inside)),
+                                        1 => Ok(BasicToken::Integer(la.mul.int)),
+                                        _ => Ok(BasicToken::c_int_root(la.mul.int, res.inside)),
                                     },
                                     Err(x) => Err(x),
                                     _ => match res.inside {
-                                        1 => Ok(Token::Fraction(la.mul)),
-                                        _ => Ok(Token::c_fraction_root(la.mul, res.inside)),
+                                        1 => Ok(BasicToken::Fraction(la.mul)),
+                                        _ => Ok(BasicToken::c_fraction_root(la.mul, res.inside)),
                                     },
                                 }
                             }
@@ -571,26 +593,26 @@ fn try_div(tup: (&Token, &Token)) -> Result<Token, MathError> {
 pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match (l_number.is_pi(), r_number.is_pi()) {
         (true, true) => match try_div((&l_number.normal(), &r_number.normal())) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() / r_number.double()
             ))),
             value => value,
         },
         (true, false) => match try_div((&l_number.normal(), &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() / r_number.double()
             ))),
             value => value?.pi(),
         },
         (false, true) => match (&l_number, &r_number) {
             // No need to check for x/0 as pi numbers promise to be non-zero
-            (Token::Integer(0), _) => Ok(Token::Integer(0)),
-            _ => Ok(Token::Double(double_check!(
+            (BasicToken::Integer(0), _) => Ok(BasicToken::Integer(0)),
+            _ => Ok(BasicToken::Double(double_check!(
                 l_number.double() / r_number.double()
             ))),
         },
         (false, false) => match try_div((&l_number, &r_number)) {
-            Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+            Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
                 l_number.double() / r_number.double()
             ))),
             value => value,
@@ -598,25 +620,26 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     }
 }
 
-fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
+fn try_exp(tup: (&BasicToken, &BasicToken)) -> Result<BasicToken, MathError> {
     match tup {
         // Check if 0^0.
-        (Token::Integer(0), Token::Integer(0)) => Err(MathError::ExponentiationError),
-        (Token::Double(a), Token::Double(b)) if !a.is_normal() && !b.is_normal() => {
+        (BasicToken::Integer(0), BasicToken::Integer(0)) => Err(MathError::ExponentiationError),
+        (BasicToken::Double(a), BasicToken::Double(b)) if !a.is_normal() && !b.is_normal() => {
             Err(MathError::ExponentiationError)
         }
-        (Token::Integer(0), Token::Double(a)) | (Token::Double(a), Token::Integer(0))
+        (BasicToken::Integer(0), BasicToken::Double(a))
+        | (BasicToken::Double(a), BasicToken::Integer(0))
             if !a.is_normal() =>
         {
             Err(MathError::ExponentiationError)
         }
 
         // Check if x^0, x^1, 0^x or 1^x
-        (Token::Integer(1), _) | (_, Token::Integer(0)) => Ok(Token::Integer(1)),
-        (Token::Integer(0), _) => Ok(Token::Integer(0)),
-        (x, Token::Integer(1)) => Ok(x.clone()),
+        (BasicToken::Integer(1), _) | (_, BasicToken::Integer(0)) => Ok(BasicToken::Integer(1)),
+        (BasicToken::Integer(0), _) => Ok(BasicToken::Integer(0)),
+        (x, BasicToken::Integer(1)) => Ok(x.clone()),
 
-        (Token::Integer(la), Token::Integer(mut ra)) => {
+        (BasicToken::Integer(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -624,11 +647,11 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             }
             let a = none_to_err!(la.checked_pow(ra as u32));
             match negative {
-                false => Ok(Token::Integer(a)),
-                true => Ok(Token::fraction(0, 1, a)),
+                false => Ok(BasicToken::Integer(a)),
+                true => Ok(BasicToken::fraction(0, 1, a)),
             }
         }
-        (Token::Fraction(la), Token::Integer(mut ra)) => {
+        (BasicToken::Fraction(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -641,12 +664,12 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 true => Fraction::new(0, den, num),
             };
             match res.normalise() {
-                Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(res.int)),
                 Err(x) => Err(x),
-                _ => Ok(Token::Fraction(res)),
+                _ => Ok(BasicToken::Fraction(res)),
             }
         }
-        (Token::Integer(la), Token::Fraction(mut ra)) => {
+        (BasicToken::Integer(la), BasicToken::Fraction(mut ra)) => {
             if ra.den != 2 && ra.den != 3 {
                 return Err(MathError::Overflow);
             }
@@ -662,19 +685,19 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             let outside = none_to_err!(res.outside.checked_pow(ra.num as u32));
             if inside_root == 1 {
                 return match negative {
-                    true => Ok(Token::fraction(0, 1, mul!(outside_root, outside))),
-                    false => Ok(Token::Integer(mul!(outside_root, outside))),
+                    true => Ok(BasicToken::fraction(0, 1, mul!(outside_root, outside))),
+                    false => Ok(BasicToken::Integer(mul!(outside_root, outside))),
                 };
             }
             if ra.den == 3 {
                 match negative {
-                    false => Ok(Token::CIntRoot(CRoot::new(
+                    false => Ok(BasicToken::CIntRoot(CRoot::new(
                         mul!(outside_root, outside),
                         inside_root,
                     ))),
                     true => match inside_root.checked_pow(2) {
                         None => Err(MathError::Overflow),
-                        Some(sq_inside_root) => Ok(Token::c_frac_root(
+                        Some(sq_inside_root) => Ok(BasicToken::c_frac_root(
                             0,
                             1,
                             mul!(mul!(outside_root, outside), inside_root),
@@ -684,8 +707,11 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 }
             } else {
                 match negative {
-                    false => Ok(Token::s_int_root(mul!(outside_root, outside), inside_root)),
-                    true => Ok(Token::s_frac_root(
+                    false => Ok(BasicToken::s_int_root(
+                        mul!(outside_root, outside),
+                        inside_root,
+                    )),
+                    true => Ok(BasicToken::s_frac_root(
                         0,
                         1,
                         mul!(mul!(outside_root, outside), inside_root),
@@ -694,7 +720,7 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 }
             }
         }
-        (Token::Fraction(la), Token::Fraction(mut ra)) => {
+        (BasicToken::Fraction(la), BasicToken::Fraction(mut ra)) => {
             if ra.den != 2 && ra.den != 3 {
                 return Err(MathError::Overflow);
             }
@@ -731,9 +757,9 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                     mul!(outside_root_den, outside_den),
                 );
                 return match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(res.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(res)),
+                    _ => Ok(BasicToken::Fraction(res)),
                 };
             }
             let mut res = Fraction::new(
@@ -743,7 +769,7 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             );
             if ra.den == 3 {
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::c_int_root(
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::c_int_root(
                         res.int,
                         mul!(
                             inside_root_num,
@@ -751,7 +777,7 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                         ),
                     )),
                     Err(x) => Err(x),
-                    _ => Ok(Token::c_fraction_root(
+                    _ => Ok(BasicToken::c_fraction_root(
                         res,
                         mul!(
                             inside_root_num,
@@ -761,12 +787,12 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
                 }
             } else {
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::SIntRoot(SRoot::new(
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::SIntRoot(SRoot::new(
                         res.int,
                         mul!(inside_root_num, inside_root_den),
                     ))),
                     Err(x) => Err(x),
-                    _ => Ok(Token::s_fraction_root(
+                    _ => Ok(BasicToken::s_fraction_root(
                         res,
                         mul!(inside_root_num, inside_root_den),
                     )),
@@ -774,7 +800,7 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             }
         }
 
-        (Token::SIntRoot(la), Token::Integer(mut ra)) => {
+        (BasicToken::SIntRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -786,18 +812,18 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             );
             if ra % 2 == 0 {
                 match negative {
-                    true => Ok(Token::fraction(0, 1, mul)),
-                    false => Ok(Token::Integer(mul)),
+                    true => Ok(BasicToken::fraction(0, 1, mul)),
+                    false => Ok(BasicToken::Integer(mul)),
                 }
             } else {
                 match negative {
-                    true => Ok(Token::s_frac_root(0, 1, mul, la.base)),
-                    false => Ok(Token::s_int_root(mul, la.base)),
+                    true => Ok(BasicToken::s_frac_root(0, 1, mul, la.base)),
+                    false => Ok(BasicToken::s_int_root(mul, la.base)),
                 }
             }
         }
 
-        (Token::CIntRoot(la), Token::Integer(mut ra)) => {
+        (BasicToken::CIntRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -809,19 +835,19 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
             );
             if ra % 3 == 0 {
                 match negative {
-                    true => Ok(Token::fraction(0, 1, mul)),
-                    false => Ok(Token::Integer(mul)),
+                    true => Ok(BasicToken::fraction(0, 1, mul)),
+                    false => Ok(BasicToken::Integer(mul)),
                 }
             } else {
                 let base = none_to_err!(la.base.checked_pow((ra % 3) as u32));
                 match negative {
-                    true => Ok(Token::c_frac_root(0, 1, mul, base)),
-                    false => Ok(Token::c_int_root(mul, base)),
+                    true => Ok(BasicToken::c_frac_root(0, 1, mul, base)),
+                    false => Ok(BasicToken::c_int_root(mul, base)),
                 }
             }
         }
 
-        (Token::SFracRoot(la), Token::Integer(mut ra)) => {
+        (BasicToken::SFracRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -841,19 +867,19 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
 
             if ra % 2 == 0 {
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(res.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(res)),
+                    _ => Ok(BasicToken::Fraction(res)),
                 }
             } else {
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::c_int_root(res.int, la.base)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::c_int_root(res.int, la.base)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::c_fraction_root(res, la.base)),
+                    _ => Ok(BasicToken::c_fraction_root(res, la.base)),
                 }
             }
         }
-        (Token::CFracRoot(la), Token::Integer(mut ra)) => {
+        (BasicToken::CFracRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
             ra = ra.abs();
             if ra > u32::MAX as i128 {
@@ -873,16 +899,16 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
 
             if ra % 3 == 0 {
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::Integer(res.int)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(res.int)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::Fraction(res)),
+                    _ => Ok(BasicToken::Fraction(res)),
                 }
             } else {
                 let base = none_to_err!(la.base.checked_pow((ra % 3) as u32));
                 match res.normalise() {
-                    Err(MathError::InvalidFraction) => Ok(Token::c_int_root(res.int, base)),
+                    Err(MathError::InvalidFraction) => Ok(BasicToken::c_int_root(res.int, base)),
                     Err(x) => Err(x),
-                    _ => Ok(Token::c_fraction_root(res, base)),
+                    _ => Ok(BasicToken::c_fraction_root(res, base)),
                 }
             }
         }
@@ -892,9 +918,10 @@ fn try_exp(tup: (&Token, &Token)) -> Result<Token, MathError> {
 
 pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
     match try_exp((&l_number, &r_number)) {
-        Err(MathError::Overflow) => Ok(Token::Double(double_check!(
+        Err(MathError::Overflow) => Ok(BasicToken::Double(double_check!(
             (l_number.double()).powf(r_number.double())
         ))),
         value => value,
     }
 }
+ */
