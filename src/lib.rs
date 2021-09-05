@@ -59,6 +59,10 @@ mod tests {
             eval(Expression::parse(Rule::calculation, "1.0").unwrap()),
             Ok(Token::Integer(1))
         );
+        assert_eq!(
+            eval(Expression::parse(Rule::calculation, "-0.5").unwrap()),
+            Ok(Token::fraction(0, -1, 2))
+        );
         assert!(Expression::parse(Rule::calculation, "-.5").is_err());
         assert!(Expression::parse(Rule::calculation, "+.5").is_err());
     }

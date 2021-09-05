@@ -65,34 +65,35 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
         Rule::dec => {
             let entire_dec = pair.as_str();
             let mut pairs = pair.into_inner();
-            let integer: &str;
+            let integer_str: &str;
             let decimal: &str;
             let pair = pairs.next().unwrap();
             match pair.as_rule() {
                 Rule::basic_int => {
-                    integer = pair.as_str();
+                    integer_str = pair.as_str();
                     decimal = pairs.next().unwrap().as_str();
                 }
                 Rule::basic_dec => {
                     // Integer may be empty as a decimal can be written like this: .5
                     decimal = pair.as_str();
-                    integer = "0"
+                    integer_str = "0"
                 }
                 _ => unreachable!(),
             }
             let exponent = pairs.next();
-            match integer.parse::<i128>() {
+            match integer_str.parse::<i128>() {
                 Ok(integer) => match decimal.parse::<i128>() {
                     Ok(decimal_int) => match ten_to_the_power_of(decimal.len() as i128) {
                         None => match_string_to_float(entire_dec),
                         Some(result) => {
                             let mut fraction = Fraction {
                                 int: integer,
-                                num: match integer {
-                                    0..=i128::MAX => decimal_int,
-                                    i128::MIN..=-1 => {
+                                // If int is negative (or -0) then we must also make the dec neg.
+                                num: match &integer_str[0..1] {
+                                    "-" => {
                                         mul!(decimal_int, -1, match_string_to_float(entire_dec))
                                     }
+                                    _ => decimal_int,
                                 },
                                 den: result,
                             };
