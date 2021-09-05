@@ -1,4 +1,4 @@
-use crate::number::try_add;
+use crate::number::{try_add, try_mul};
 use core::fmt;
 use gcd::Gcd;
 
@@ -110,10 +110,7 @@ impl Token {
         match self {
             Token::Basic(x) => x.double(),
             Token::Pi(x) => x.double() * std::f64::consts::PI,
-            Token::Combined(i) => {
-                i.basic.iter().fold(0_f64, |acc, tok| acc + tok.double())
-                    + i.pi.iter().fold(0_f64, |acc, tok| acc + tok.double()) * std::f64::consts::PI
-            }
+            Token::Combined(i) => i.double(),
         }
     }
     pub fn negate(self) -> Result<Token, MathError> {
@@ -323,22 +320,23 @@ impl<T: fmt::Display> fmt::Display for SRoot<T> {
 }
 
 impl SRoot<Fraction> {
-    #[inline]
     pub fn normalise(self) -> Result<BasicToken, MathError> {
-        Ok(match self.mul.normalise()? {
-            BasicToken::Integer(0) => BasicToken::Integer(0),
-            BasicToken::Fraction(_) => BasicToken::SFracRoot(self),
-            BasicToken::Integer(x) => BasicToken::s_int_root(x, self.base),
-            _ => unreachable!(),
-        })
+        match self.base {
+            1 => self.mul.normalise(),
+            _ => Ok(match self.mul.normalise()? {
+                BasicToken::Integer(0) => BasicToken::Integer(0),
+                BasicToken::Fraction(val) => BasicToken::SFracRoot(SRoot::new(val, self.base)),
+                BasicToken::Integer(x) => BasicToken::s_int_root(x, self.base),
+                _ => unreachable!(),
+            }),
+        }
     }
 }
 
 impl SRoot<i128> {
-    #[inline]
     pub fn normalise(self) -> BasicToken {
-        match self.mul {
-            0 => BasicToken::Integer(0),
+        match self {
+            SRoot { mul: 0, base: _ } | SRoot { mul: _, base: 1 } => BasicToken::Integer(0),
             _ => BasicToken::SIntRoot(self),
         }
     }
@@ -363,22 +361,23 @@ impl<T: fmt::Display> fmt::Display for CRoot<T> {
 }
 
 impl CRoot<Fraction> {
-    #[inline]
     pub fn normalise(self) -> Result<BasicToken, MathError> {
-        Ok(match self.mul.normalise()? {
-            BasicToken::Integer(0) => BasicToken::Integer(0),
-            BasicToken::Fraction(_) => BasicToken::CFracRoot(self),
-            BasicToken::Integer(x) => BasicToken::c_int_root(x, self.base),
-            _ => unreachable!(),
-        })
+        match self.base {
+            1 => self.mul.normalise(),
+            _ => Ok(match self.mul.normalise()? {
+                BasicToken::Integer(0) => BasicToken::Integer(0),
+                BasicToken::Fraction(val) => BasicToken::CFracRoot(CRoot::new(val, self.base)),
+                BasicToken::Integer(x) => BasicToken::c_int_root(x, self.base),
+                _ => unreachable!(),
+            }),
+        }
     }
 }
 
 impl CRoot<i128> {
-    #[inline]
     pub fn normalise(self) -> BasicToken {
-        match self.mul {
-            0 => BasicToken::Integer(0),
+        match self {
+            CRoot { mul: 0, base: _ } | CRoot { mul: _, base: 1 } => BasicToken::Integer(0),
             _ => BasicToken::CIntRoot(self),
         }
     }
@@ -391,8 +390,7 @@ pub struct Combined {
 }
 
 impl Combined {
-    #[inline]
-    pub fn normalise(self) -> Token {
+    fn normalise(self) -> Token {
         match (self.basic.len(), self.pi.len()) {
             (0, 0) => Token::Basic(BasicToken::Integer(0)),
             (0, 1) => Token::Pi(self.pi[0]),
@@ -401,8 +399,17 @@ impl Combined {
         }
     }
 
-    pub fn add_combined(mut self, tok: Token) -> Result<Combined, MathError> {
+    #[inline]
+    pub fn double(&self) -> f64 {
+        self.basic.iter().fold(0_f64, |acc, tok| acc + tok.double())
+            + self.pi.iter().fold(0_f64, |acc, tok| acc + tok.double()) * std::f64::consts::PI
+    }
+
+    pub fn add_combined(mut self, tok: Token) -> Result<Token, MathError> {
         match tok {
+            Token::Basic(BasicToken::Integer(0)) | Token::Pi(BasicToken::Integer(0)) => {
+                return Ok(Token::Combined(self));
+            }
             Token::Basic(tok) => {
                 self.basic_add(tok)?;
             }
@@ -418,7 +425,55 @@ impl Combined {
                 }
             }
         }
-        Ok(self)
+        Ok(self.normalise())
+    }
+
+    pub fn mul_combined(mut self, tok: Token) -> Result<Token, MathError> {
+        match tok {
+            Token::Basic(BasicToken::Integer(0)) | Token::Pi(BasicToken::Integer(0)) => {
+                Ok(Token::Basic(BasicToken::Integer(0)))
+            }
+            Token::Basic(tok) => {
+                for comb_tok in self.basic.iter_mut().chain(self.pi.iter_mut()) {
+                    match try_mul(*comb_tok, tok) {
+                        Ok(val) => {
+                            *comb_tok = val;
+                        }
+                        Err(MathError::Overflow) => {
+                            return Ok(Token::Basic(BasicToken::Double(double_check!(
+                                self.double() * tok.double()
+                            ))));
+                        }
+                        Err(val) => {
+                            return Err(val);
+                        }
+                    }
+                }
+                Ok(self.normalise())
+            }
+            // Transform all the basics into Pi
+            Token::Pi(tok) if self.pi.is_empty() => {
+                for comb_tok in self.basic.iter_mut() {
+                    match try_mul(*comb_tok, tok) {
+                        Ok(val) => {
+                            *comb_tok = val;
+                        }
+                        Err(MathError::Overflow) => {
+                            return Ok(Token::Basic(BasicToken::Double(double_check!(
+                                self.double() * tok.double()
+                            ))));
+                        }
+                        Err(val) => {
+                            return Err(val);
+                        }
+                    }
+                }
+                Ok(self.normalise())
+            }
+            tok => Ok(Token::Basic(BasicToken::Double(double_check!(
+                self.double() * tok.double()
+            )))),
+        }
     }
 
     pub fn negate(mut self) -> Result<Combined, MathError> {
@@ -433,7 +488,7 @@ impl Combined {
 
     fn basic_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
         for (pos, basic) in self.basic.iter().enumerate() {
-            match try_add((*basic, tok)) {
+            match try_add(*basic, tok) {
                 Err(MathError::Overflow) => {
                     let double = double_check!(self
                         .basic
@@ -477,7 +532,7 @@ impl Combined {
 
     fn pi_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
         for (pos, basic) in self.pi.iter().enumerate() {
-            match try_add((*basic, tok)) {
+            match try_add(*basic, tok) {
                 Err(MathError::Overflow) => {
                     let double = double_check!(self
                         .pi
