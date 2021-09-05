@@ -3,11 +3,7 @@ use crate::types::{BasicToken, CRoot, Fraction, MathError, SRoot, Token};
 
 pub(crate) fn try_add(tup: (BasicToken, BasicToken)) -> Result<BasicToken, MathError> {
     match tup {
-        (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.add(&ra) {
-            Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
-            Err(x) => Err(x),
-            _ => Ok(BasicToken::Fraction(la)),
-        },
+        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.add(&ra),
         (BasicToken::Fraction(mut la), BasicToken::Integer(ra))
         | (BasicToken::Integer(ra), BasicToken::Fraction(mut la)) => {
             la.int = add!(la.int, ra);
@@ -16,39 +12,31 @@ pub(crate) fn try_add(tup: (BasicToken, BasicToken)) -> Result<BasicToken, MathE
         (BasicToken::Integer(la), BasicToken::Integer(ra)) => Ok(BasicToken::Integer(add!(la, ra))),
         (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul = add!(la.mul, ra.mul);
-            Ok(BasicToken::SIntRoot(la))
+            Ok(la.normalise())
         }
         (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra))
         | (BasicToken::SIntRoot(ra), BasicToken::SFracRoot(mut la))
             if la.base == ra.base =>
         {
             la.mul.int = add!(la.mul.int, ra.mul);
-            Ok(BasicToken::SFracRoot(la))
+            la.normalise()
         }
-        (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
-            match la.mul.add(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
-                Err(x) => Err(x),
-                _ => Ok(BasicToken::SFracRoot(la)),
-            }
+        (BasicToken::SFracRoot(la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
+            la.mul.add(&ra.mul)
         }
         (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = add!(la.mul, ra.mul);
-            Ok(BasicToken::CIntRoot(la))
+            Ok(la.normalise())
         }
         (BasicToken::CFracRoot(mut la), BasicToken::CIntRoot(ra))
         | (BasicToken::CIntRoot(ra), BasicToken::CFracRoot(mut la))
             if la.base == ra.base =>
         {
             la.mul.int = add!(la.mul.int, ra.mul);
-            Ok(BasicToken::CFracRoot(la))
+            la.normalise()
         }
-        (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
-            match la.mul.add(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
-                Err(x) => Err(x),
-                _ => Ok(BasicToken::CFracRoot(la)),
-            }
+        (BasicToken::CFracRoot(la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
+            la.mul.add(&ra.mul)
         }
         (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
         _ => Err(MathError::Combine),
@@ -62,6 +50,7 @@ pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 (l.double() + r.double()) * std::f64::consts::PI
             )))),
             Err(MathError::Combine) => Ok(Token::combined(vec![], vec![l, r])),
+            Ok(BasicToken::Integer(0)) => Ok(Token::Basic(BasicToken::Integer(0))),
             value => Ok(Token::Pi(value?)),
         },
         (Token::Basic(l), Token::Basic(r)) => match try_add((l, r)) {
@@ -71,9 +60,7 @@ pub fn add(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             Err(MathError::Combine) => Ok(Token::combined(vec![l, r], vec![])),
             value => Ok(Token::Basic(value?)),
         },
-        (Token::Combined(l), r) | (r, Token::Combined(l)) => {
-            Ok(Token::Combined(l.add_combined(r)?))
-        }
+        (Token::Combined(l), r) | (r, Token::Combined(l)) => Ok(l.add_combined(r)?.normalise()),
         (Token::Basic(basic), Token::Pi(pi)) | (Token::Pi(pi), Token::Basic(basic)) => {
             Ok(Token::combined(vec![basic], vec![pi]))
         }
@@ -92,50 +79,38 @@ fn try_sub(tup: (BasicToken, BasicToken)) -> Result<BasicToken, MathError> {
             ra.num = mul!(ra.num, -1);
             Ok(BasicToken::Fraction(ra))
         }
-        (BasicToken::Fraction(mut la), BasicToken::Fraction(ra)) => match la.sub(&ra) {
-            Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.int)),
-            Err(x) => Err(x),
-            _ => Ok(BasicToken::Fraction(la)),
-        },
+        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.sub(&ra),
         (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
-            Ok(BasicToken::SIntRoot(la))
+            Ok(la.normalise())
         }
         (BasicToken::SFracRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul.int = sub!(la.mul.int, ra.mul);
-            Ok(BasicToken::SFracRoot(la))
+            la.normalise()
         }
         (BasicToken::SIntRoot(la), BasicToken::SFracRoot(mut ra)) if la.base == ra.base => {
             ra.mul.int = sub!(la.mul, ra.mul.int);
             ra.mul.num = mul!(ra.mul.num, -1);
-            Ok(BasicToken::SFracRoot(ra))
+            ra.normalise()
         }
-        (BasicToken::SFracRoot(mut la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
-            match la.mul.sub(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
-                Err(x) => Err(x),
-                _ => Ok(BasicToken::SFracRoot(la)),
-            }
+        (BasicToken::SFracRoot(la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
+            la.mul.sub(&ra.mul)
         }
         (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
-            Ok(BasicToken::CIntRoot(la))
+            Ok(la.normalise())
         }
         (BasicToken::CFracRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul.int = sub!(la.mul.int, ra.mul);
-            Ok(BasicToken::CFracRoot(la))
+            la.normalise()
         }
         (BasicToken::CIntRoot(la), BasicToken::CFracRoot(mut ra)) if la.base == ra.base => {
             ra.mul.int = sub!(la.mul, ra.mul.int);
             ra.mul.num = mul!(ra.mul.num, -1);
-            Ok(BasicToken::CFracRoot(ra))
+            ra.normalise()
         }
-        (BasicToken::CFracRoot(mut la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
-            match la.mul.sub(&ra.mul) {
-                Err(MathError::InvalidFraction) => Ok(BasicToken::Integer(la.mul.int)),
-                Err(x) => Err(x),
-                _ => Ok(BasicToken::CFracRoot(la)),
-            }
+        (BasicToken::CFracRoot(la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
+            la.mul.sub(&ra.mul)
         }
         (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
         _ => Err(MathError::Combine),
@@ -149,6 +124,7 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                 (l.double() - r.double()) * std::f64::consts::PI
             )))),
             Err(MathError::Combine) => Ok(Token::combined(vec![], vec![l, r.negate()?])),
+            Ok(BasicToken::Integer(0)) => Ok(Token::Basic(BasicToken::Integer(0))),
             value => Ok(Token::Pi(value?)),
         },
         (Token::Basic(l), Token::Basic(r)) => match try_sub((l, r)) {
@@ -158,8 +134,8 @@ pub fn sub(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             Err(MathError::Combine) => Ok(Token::combined(vec![l, r.negate()?], vec![])),
             value => Ok(Token::Basic(value?)),
         },
-        (Token::Combined(l), r) => Ok(Token::Combined(l.add_combined(r.negate()?)?)),
-        (l, Token::Combined(r)) => Ok(Token::Combined(r.negate()?.add_combined(l)?)),
+        (Token::Combined(l), r) => Ok((l.add_combined(r.negate()?)?).normalise()),
+        (l, Token::Combined(r)) => Ok(r.negate()?.add_combined(l)?.normalise()),
         (Token::Basic(basic), Token::Pi(pi)) => {
             Ok(Token::combined(vec![basic], vec![pi.negate()?]))
         }

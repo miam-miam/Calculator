@@ -210,7 +210,7 @@ impl Fraction {
         Fraction { int, num, den }
     }
 
-    pub fn normalise(&mut self) -> Result<(), MathError> {
+    pub fn normalise(mut self) -> Result<BasicToken, MathError> {
         // At the end den must be positive and int must have the same sign as num
         if self.den == 0 {
             return Err(MathError::DivisionByZero);
@@ -221,16 +221,14 @@ impl Fraction {
         }
         if self.den == 1 {
             self.int = add!(self.int, self.num);
-            self.num = 0;
-            return Err(MathError::InvalidFraction);
+            return Ok(BasicToken::Integer(self.int));
         }
         if (self.num > 0 && self.num >= self.den) || (self.num < 0 && -self.num >= self.den) {
             self.int = add!(self.int, self.num / self.den);
             self.num -= (self.num / self.den) * self.den;
         }
         if self.num == 0 {
-            self.den = 1;
-            return Err(MathError::InvalidFraction);
+            return Ok(BasicToken::Integer(self.int));
         }
         let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
         self.num /= gcd;
@@ -244,24 +242,24 @@ impl Fraction {
             self.num -= self.den;
             self.int += 1;
         }
-        Ok(())
+        Ok(BasicToken::Fraction(self))
     }
 
-    pub fn add(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+    pub fn add(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
         self.int = add!(self.int, rhs.int);
         self.num = add!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
 
-    pub fn sub(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+    pub fn sub(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
         self.int = sub!(self.int, rhs.int);
         self.num = sub!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
 
-    pub fn mul(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+    pub fn mul(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
         self.num = add!(
             mul!(self.num, rhs.num),
             add!(
@@ -274,7 +272,7 @@ impl Fraction {
         self.normalise()
     }
 
-    pub fn div(&mut self, rhs: &Fraction) -> Result<(), MathError> {
+    pub fn div(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
         self.num = mul!(rhs.den, add!(self.num, mul!(self.int, self.den)));
         self.den = mul!(self.den, add!(rhs.num, mul!(rhs.int, rhs.den)));
         self.int = 0;
@@ -324,6 +322,28 @@ impl<T: fmt::Display> fmt::Display for SRoot<T> {
     }
 }
 
+impl SRoot<Fraction> {
+    #[inline]
+    pub fn normalise(self) -> Result<BasicToken, MathError> {
+        Ok(match self.mul.normalise()? {
+            BasicToken::Integer(0) => BasicToken::Integer(0),
+            BasicToken::Fraction(_) => BasicToken::SFracRoot(self),
+            BasicToken::Integer(x) => BasicToken::s_int_root(x, self.base),
+            _ => unreachable!(),
+        })
+    }
+}
+
+impl SRoot<i128> {
+    #[inline]
+    pub fn normalise(self) -> BasicToken {
+        match self.mul {
+            0 => BasicToken::Integer(0),
+            _ => BasicToken::SIntRoot(self),
+        }
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct CRoot<T> {
     pub mul: T,
@@ -342,13 +362,45 @@ impl<T: fmt::Display> fmt::Display for CRoot<T> {
     }
 }
 
+impl CRoot<Fraction> {
+    #[inline]
+    pub fn normalise(self) -> Result<BasicToken, MathError> {
+        Ok(match self.mul.normalise()? {
+            BasicToken::Integer(0) => BasicToken::Integer(0),
+            BasicToken::Fraction(_) => BasicToken::CFracRoot(self),
+            BasicToken::Integer(x) => BasicToken::c_int_root(x, self.base),
+            _ => unreachable!(),
+        })
+    }
+}
+
+impl CRoot<i128> {
+    #[inline]
+    pub fn normalise(self) -> BasicToken {
+        match self.mul {
+            0 => BasicToken::Integer(0),
+            _ => BasicToken::CIntRoot(self),
+        }
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub struct Combined {
-    pub basic: Vec<BasicToken>,
-    pub pi: Vec<BasicToken>,
+    basic: Vec<BasicToken>,
+    pi: Vec<BasicToken>,
 }
 
 impl Combined {
+    #[inline]
+    pub fn normalise(self) -> Token {
+        match (self.basic.len(), self.pi.len()) {
+            (0, 0) => Token::Basic(BasicToken::Integer(0)),
+            (0, 1) => Token::Pi(self.pi[0]),
+            (1, 0) => Token::Basic(self.basic[0]),
+            _ => Token::Combined(self),
+        }
+    }
+
     pub fn add_combined(mut self, tok: Token) -> Result<Combined, MathError> {
         match tok {
             Token::Basic(tok) => {
@@ -394,9 +446,29 @@ impl Combined {
                 Err(MathError::Combine) => {
                     continue;
                 }
-                val => {
-                    self.basic.splice(pos..pos + 1, [val?]);
+                Ok(BasicToken::Integer(0)) => {
+                    self.basic.swap_remove(pos);
                     break;
+                }
+                val => {
+                    use BasicToken::*;
+                    match (basic, val?) {
+                        // Is same type
+                        (Integer(_), Integer(_))
+                        | (Fraction(_), Fraction(_))
+                        | (SIntRoot(_), SIntRoot(_))
+                        | (SFracRoot(_), SFracRoot(_))
+                        | (Double(_), Double(_))
+                        | (CIntRoot(_), CIntRoot(_))
+                        | (CFracRoot(_), CFracRoot(_)) => {
+                            self.basic.splice(pos..pos + 1, [val?]);
+                            break;
+                        }
+                        (_, val) => {
+                            // Try to see if the val can be added somewhere else.
+                            return self.basic_add(val);
+                        }
+                    }
                 }
             }
         }
@@ -418,9 +490,29 @@ impl Combined {
                 Err(MathError::Combine) => {
                     continue;
                 }
-                val => {
-                    self.pi.splice(pos..pos + 1, [val?]);
+                Ok(BasicToken::Integer(0)) => {
+                    self.pi.swap_remove(pos);
                     break;
+                }
+                val => {
+                    use BasicToken::*;
+                    match (basic, val?) {
+                        // Is same type
+                        (Integer(_), Integer(_))
+                        | (Fraction(_), Fraction(_))
+                        | (SIntRoot(_), SIntRoot(_))
+                        | (SFracRoot(_), SFracRoot(_))
+                        | (Double(_), Double(_))
+                        | (CIntRoot(_), CIntRoot(_))
+                        | (CFracRoot(_), CFracRoot(_)) => {
+                            self.pi.splice(pos..pos + 1, [val?]);
+                            break;
+                        }
+                        (_, val) => {
+                            // Try to see if the val can be added somewhere else.
+                            return self.pi_add(val);
+                        }
+                    }
                 }
             }
         }

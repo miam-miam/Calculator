@@ -48,10 +48,9 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                             None => match_string_to_float(entire_int),
                             Some(val) => {
                                 let mut frac = Fraction::new(0, integer, val);
-                                match frac.normalise() {
-                                    Ok(_) => Ok(Token::Basic(BasicToken::Fraction(frac))),
-                                    Err(MathError::InvalidFraction) => Ok(Token::Basic(BasicToken::Integer(frac.int))),
-                                    _ => unreachable!(),
+                                match fraction.normalise() {
+                                    Err(_) => match_string_to_float(pair_str),
+                                    Ok(val) => Ok(Token::Basic(val)),
                                 }
                             }
                         },
@@ -144,9 +143,8 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                                 }
                             }
                             match fraction.normalise() {
-                                Err(MathError::InvalidFraction) => Ok(Token::Basic(BasicToken::Integer(fraction.int))),
-                                Err(MathError::Overflow) => match_string_to_float(entire_dec),
-                                _ => Ok(Token::Basic(BasicToken::Fraction(fraction))),
+                                Err(_) => match_string_to_float(pair_str),
+                                Ok(val) => Ok(Token::Basic(val)),
                             }
                         }
                     },
