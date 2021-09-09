@@ -4,7 +4,7 @@ pub use pest::Parser;
 
 use crate::my_math::ten_to_the_power_of;
 // use crate::number::{add, div, exp, mul, sub};
-use crate::number::{add, mul, sub};
+use crate::number::{add, div, mul, sub};
 use crate::types::{BasicToken, Fraction, MathError, Token};
 use std::cmp::Ordering;
 
@@ -169,7 +169,7 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
             Rule::add => add(lhs?, rhs?),
             Rule::subtract => sub(lhs?, rhs?),
             Rule::multiply => mul(lhs?, rhs?),
-            // Rule::divide => div(lhs?, rhs?),
+            Rule::divide => div(lhs?, rhs?),
             // Rule::power => exp(lhs?, rhs?),
             _ => unreachable!(),
         },

@@ -78,6 +78,28 @@ impl BasicToken {
             BasicToken::Double(i) => BasicToken::Double(-i),
         })
     }
+
+    pub fn new_s_root(tok: BasicToken, base: i128) -> Result<BasicToken, MathError> {
+        Ok(match (tok, base) {
+            (BasicToken::Integer(0), _) | (_, 0) => BasicToken::Integer(0),
+            (val, 1) => val,
+            (BasicToken::Fraction(val), _) => BasicToken::s_fraction_root(val, base),
+            (BasicToken::Integer(val), _) => BasicToken::s_int_root(val, base),
+            _ => unreachable!(),
+        })
+    }
+
+    pub fn new_c_root(tok: BasicToken, base: i128) -> Result<BasicToken, MathError> {
+        Ok(match (tok, base) {
+            (BasicToken::Integer(0), _) | (_, 0) => BasicToken::Integer(0),
+            (val, 1) => val,
+            (BasicToken::Fraction(val), -1) => BasicToken::Fraction(val.negate()?),
+            (BasicToken::Integer(val), -1) => BasicToken::Integer(-val),
+            (BasicToken::Fraction(val), _) => BasicToken::c_fraction_root(val, base),
+            (BasicToken::Integer(val), _) => BasicToken::c_int_root(val, base),
+            _ => unreachable!(),
+        })
+    }
 }
 
 impl fmt::Debug for BasicToken {
@@ -322,6 +344,7 @@ impl<T: fmt::Display> fmt::Display for SRoot<T> {
 impl SRoot<Fraction> {
     pub fn normalise(self) -> Result<BasicToken, MathError> {
         match self.base {
+            0 => Ok(BasicToken::Integer(0)),
             1 => self.mul.normalise(),
             _ => Ok(match self.mul.normalise()? {
                 BasicToken::Integer(0) => BasicToken::Integer(0),
@@ -336,7 +359,8 @@ impl SRoot<Fraction> {
 impl SRoot<i128> {
     pub fn normalise(self) -> BasicToken {
         match self {
-            SRoot { mul: 0, base: _ } | SRoot { mul: _, base: 1 } => BasicToken::Integer(0),
+            SRoot { mul: 0, base: _ } | SRoot { mul: _, base: 0 } => BasicToken::Integer(0),
+            SRoot { mul: x, base: 1 } => BasicToken::Integer(x),
             _ => BasicToken::SIntRoot(self),
         }
     }
@@ -363,7 +387,9 @@ impl<T: fmt::Display> fmt::Display for CRoot<T> {
 impl CRoot<Fraction> {
     pub fn normalise(self) -> Result<BasicToken, MathError> {
         match self.base {
+            0 => Ok(BasicToken::Integer(0)),
             1 => self.mul.normalise(),
+            -1 => self.mul.negate()?.normalise(),
             _ => Ok(match self.mul.normalise()? {
                 BasicToken::Integer(0) => BasicToken::Integer(0),
                 BasicToken::Fraction(val) => BasicToken::CFracRoot(CRoot::new(val, self.base)),
@@ -375,22 +401,24 @@ impl CRoot<Fraction> {
 }
 
 impl CRoot<i128> {
-    pub fn normalise(self) -> BasicToken {
-        match self {
-            CRoot { mul: 0, base: _ } | CRoot { mul: _, base: 1 } => BasicToken::Integer(0),
+    pub fn normalise(self) -> Result<BasicToken, MathError> {
+        Ok(match self {
+            CRoot { mul: 0, base: _ } | CRoot { mul: _, base: 0 } => BasicToken::Integer(0),
+            CRoot { mul: x, base: 1 } => BasicToken::Integer(x),
+            CRoot { mul: x, base: -1 } => BasicToken::Integer(mul!(x, -1)),
             _ => BasicToken::CIntRoot(self),
-        }
+        })
     }
 }
 
 #[derive(PartialEq, Clone)]
 pub struct Combined {
-    basic: Vec<BasicToken>,
-    pi: Vec<BasicToken>,
+    pub basic: Vec<BasicToken>,
+    pub pi: Vec<BasicToken>,
 }
 
 impl Combined {
-    fn normalise(self) -> Token {
+    pub fn normalise(self) -> Token {
         match (self.basic.len(), self.pi.len()) {
             (0, 0) => Token::Basic(BasicToken::Integer(0)),
             (0, 1) => Token::Pi(self.pi[0]),
