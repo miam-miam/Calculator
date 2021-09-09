@@ -1,6 +1,7 @@
 use crate::number::{try_add, try_mul};
 use core::fmt;
 use gcd::Gcd;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum BasicToken {
@@ -264,21 +265,36 @@ impl Fraction {
         Ok(BasicToken::Fraction(self))
     }
 
-    pub fn add(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
+    pub fn negate(mut self) -> Result<Fraction, MathError> {
+        self.num = mul!(self.num, -1);
+        self.int = mul!(self.int, -1);
+        Ok(self)
+    }
+}
+
+impl Add for Fraction {
+    type Output = Result<BasicToken, MathError>;
+    fn add(mut self, rhs: Fraction) -> Result<BasicToken, MathError> {
         self.int = add!(self.int, rhs.int);
         self.num = add!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
+}
 
-    pub fn sub(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
+impl Sub for Fraction {
+    type Output = Result<BasicToken, MathError>;
+    fn sub(mut self, rhs: Fraction) -> Result<BasicToken, MathError> {
         self.int = sub!(self.int, rhs.int);
         self.num = sub!(mul!(self.num, rhs.den), mul!(self.den, rhs.num));
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
+}
 
-    pub fn mul(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
+impl Mul for Fraction {
+    type Output = Result<BasicToken, MathError>;
+    fn mul(mut self, rhs: Fraction) -> Result<BasicToken, MathError> {
         self.num = add!(
             mul!(self.num, rhs.num),
             add!(
@@ -290,18 +306,16 @@ impl Fraction {
         self.den = mul!(self.den, rhs.den);
         self.normalise()
     }
+}
 
-    pub fn div(mut self, rhs: &Fraction) -> Result<BasicToken, MathError> {
+impl Div for Fraction {
+    type Output = Result<BasicToken, MathError>;
+
+    fn div(mut self, rhs: Fraction) -> Result<BasicToken, MathError> {
         self.num = mul!(rhs.den, add!(self.num, mul!(self.int, self.den)));
         self.den = mul!(self.den, add!(rhs.num, mul!(rhs.int, rhs.den)));
         self.int = 0;
         self.normalise()
-    }
-
-    pub fn negate(mut self) -> Result<Fraction, MathError> {
-        self.num = mul!(self.num, -1);
-        self.int = mul!(self.int, -1);
-        Ok(self)
     }
 }
 

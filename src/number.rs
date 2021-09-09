@@ -3,7 +3,7 @@ use crate::types::{BasicToken, CRoot, Combined, Fraction, MathError, SRoot, Toke
 
 pub fn try_add(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
     match (lhs, rhs) {
-        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.add(&ra),
+        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la + ra,
         (BasicToken::Fraction(mut la), BasicToken::Integer(ra))
         | (BasicToken::Integer(ra), BasicToken::Fraction(mut la)) => {
             la.int = add!(la.int, ra);
@@ -22,7 +22,7 @@ pub fn try_add(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError
             la.normalise()
         }
         (BasicToken::SFracRoot(la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
-            BasicToken::new_s_root(la.mul.add(&ra.mul)?, la.base)
+            BasicToken::new_s_root((la.mul + ra.mul)?, la.base)
         }
         (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = add!(la.mul, ra.mul);
@@ -36,7 +36,7 @@ pub fn try_add(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError
             la.normalise()
         }
         (BasicToken::CFracRoot(la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
-            BasicToken::new_c_root(la.mul.add(&ra.mul)?, la.base)
+            BasicToken::new_c_root((la.mul + ra.mul)?, la.base)
         }
         (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
         _ => Err(MathError::Combine),
@@ -79,7 +79,7 @@ fn try_sub(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
             ra.num = mul!(ra.num, -1);
             Ok(BasicToken::Fraction(ra))
         }
-        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.sub(&ra),
+        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la - ra,
         (BasicToken::SIntRoot(mut la), BasicToken::SIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
             Ok(la.normalise())
@@ -94,7 +94,7 @@ fn try_sub(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
             ra.normalise()
         }
         (BasicToken::SFracRoot(la), BasicToken::SFracRoot(ra)) if la.base == ra.base => {
-            BasicToken::new_s_root(la.mul.sub(&ra.mul)?, la.base)
+            BasicToken::new_s_root((la.mul - ra.mul)?, la.base)
         }
         (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) if la.base == ra.base => {
             la.mul = sub!(la.mul, ra.mul);
@@ -110,7 +110,7 @@ fn try_sub(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
             ra.normalise()
         }
         (BasicToken::CFracRoot(la), BasicToken::CFracRoot(ra)) if la.base == ra.base => {
-            BasicToken::new_c_root(la.mul.sub(&ra.mul)?, la.base)
+            BasicToken::new_c_root((la.mul - ra.mul)?, la.base)
         }
         (_, BasicToken::Double(_)) | (BasicToken::Double(_), _) => Err(MathError::Overflow),
         _ => Err(MathError::Combine),
@@ -150,7 +150,7 @@ pub fn try_mul(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError
         // a*0 = 0
         (BasicToken::Integer(0), _) | (_, BasicToken::Integer(0)) => Ok(BasicToken::Integer(0)),
 
-        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.mul(&ra),
+        (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la * ra,
         (BasicToken::Fraction(mut la), BasicToken::Integer(ra))
         | (BasicToken::Integer(ra), BasicToken::Fraction(mut la)) => {
             la.int = mul!(la.int, ra);
@@ -180,7 +180,7 @@ pub fn try_mul(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError
             let res = factorise(mul!(la.base, ra.base), true);
             la.mul.int = mul!(la.mul.int, res.outside);
             la.mul.num = mul!(la.mul.num, res.outside);
-            BasicToken::new_s_root(la.mul.mul(&ra.mul)?, res.inside)
+            BasicToken::new_s_root((la.mul * ra.mul)?, res.inside)
         }
         (BasicToken::CIntRoot(mut la), BasicToken::CIntRoot(ra)) => {
             la.mul = mul!(la.mul, ra.mul);
@@ -203,7 +203,7 @@ pub fn try_mul(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError
             let res = factorise(mul!(la.base, ra.base), false);
             la.mul.int = mul!(la.mul.int, res.outside);
             la.mul.num = mul!(la.mul.num, res.outside);
-            BasicToken::new_c_root(la.mul.mul(&ra.mul)?, res.inside)
+            BasicToken::new_c_root((la.mul * ra.mul)?, res.inside)
         }
         _ => Err(MathError::Overflow),
     }
@@ -257,7 +257,7 @@ fn try_div(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
                 ra.int = 0;
                 ra.normalise()
             }
-            (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la.div(&ra),
+            (BasicToken::Fraction(la), BasicToken::Fraction(ra)) => la / ra,
             (BasicToken::SIntRoot(la), BasicToken::SIntRoot(ra)) => {
                 let mut frac = Fraction::new(0, la.mul, mul!(ra.mul, ra.base));
                 let res = factorise(mul!(la.base, ra.base), true);
@@ -298,7 +298,7 @@ fn try_div(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
                         let res = factorise(mul!(la.base, ra.base), true);
                         la.mul.int = mul!(la.mul.int, res.outside);
                         la.mul.num = mul!(la.mul.int, res.outside);
-                        BasicToken::new_s_root(la.mul.div(&frac)?, res.inside)
+                        BasicToken::new_s_root((la.mul / frac)?, res.inside)
                     }
                     _ => unreachable!(),
                 }
@@ -343,7 +343,7 @@ fn try_div(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
                         let res = factorise(mul!(la.base, ra.base), false);
                         la.mul.int = mul!(la.mul.int, res.outside);
                         la.mul.num = mul!(la.mul.int, res.outside);
-                        BasicToken::new_c_root(la.mul.div(&frac)?, res.inside)
+                        BasicToken::new_c_root((la.mul / frac)?, res.inside)
                     }
                     _ => unreachable!(),
                 }
