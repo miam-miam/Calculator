@@ -66,7 +66,7 @@ mod tests {
         );
         assert_eq!(
             eval(Expression::parse(calculation, "-0.5").unwrap()),
-            Ok(Basic(BasicToken::fraction(0, -1, 2))
+            Ok(Basic(BasicToken::fraction(0, -1, 2)))
         );
         assert!(Expression::parse(calculation, "-.5").is_err());
         assert!(Expression::parse(calculation, "+.5").is_err());

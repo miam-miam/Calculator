@@ -46,9 +46,9 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                         Ok(exponent) if exponent < 0 => match ten_to_the_power_of(-exponent) {
                             None => match_string_to_float(entire_int),
                             Some(val) => {
-                                let mut frac = Fraction::new(0, integer, val);
-                                match fraction.normalise() {
-                                    Err(_) => match_string_to_float(pair_str),
+                                let frac = Fraction::new(0, integer, val);
+                                match frac.normalise() {
+                                    Err(_) => match_string_to_float(entire_int),
                                     Ok(val) => Ok(Token::Basic(val)),
                                 }
                             }
@@ -142,7 +142,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                                 }
                             }
                             match fraction.normalise() {
-                                Err(_) => match_string_to_float(pair_str),
+                                Err(_) => match_string_to_float(entire_dec),
                                 Ok(val) => Ok(Token::Basic(val)),
                             }
                         }
@@ -152,8 +152,12 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
                 Err(_) => match_string_to_float(entire_dec),
             }
         }
-        Rule::pi => token_eval(pair.into_inner().next().unwrap())?.pi(),
-        Rule::single_pi => Ok(Token::Basic(BasicToken::pi_integer(1))),
+        Rule::pi => Ok(match token_eval(pair.into_inner().next().unwrap())? {
+            Token::Basic(BasicToken::Integer(0)) => Token::Basic(BasicToken::Integer(0)),
+            Token::Basic(x) => Token::Pi(x),
+            _ => unreachable!(),
+        }),
+        Rule::single_pi => Ok(Token::Pi(BasicToken::Integer(0))),
         _ => unreachable!(),
     }
 }
@@ -200,7 +204,7 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
                 |acc: (f64, Token), pair: Pair<'_, Rule>| {
                     let token = eval(pair.into_inner())?;
                     let double = token.double();
-                    return Ok(if double < acc.0 { (double, token) } else { acc });
+                    Ok(if double < acc.0 { (double, token) } else { acc })
                 },
             )?
             .1),
@@ -210,7 +214,7 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
                 |acc: (f64, Token), pair: Pair<'_, Rule>| {
                     let token = eval(pair.into_inner())?;
                     let double = token.double();
-                    return Ok(if double > acc.0 { (double, token) } else { acc });
+                    Ok(if double > acc.0 { (double, token) } else { acc })
                 },
             )?
             .1),

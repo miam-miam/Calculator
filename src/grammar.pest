@@ -20,9 +20,7 @@ func = {multi_arg | single_arg}
         square = {"square"}
         cube = {"cube"}
 
-    multi_arg = _{(test | min | max) ~ "(" ~ expr ~ (";" ~ expr)* ~ ")"?}
-        //TODO Remove
-        test = {"test"}
+    multi_arg = _{( min | max) ~ "(" ~ expr ~ (";" ~ expr)* ~ ")"?}
         min = {"min"}
         max = {"max"}
 
