@@ -1,5 +1,5 @@
 use crate::my_math::factorise;
-use crate::types::{BasicToken, Combined, Fraction, MathError, Token};
+use crate::types::{BasicToken, Combined, Fraction, MathError, Set, Token};
 
 pub fn try_add(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
     match (lhs, rhs) {
@@ -383,10 +383,10 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             BasicToken::Double(double_check!(l_number.double() / r_number.double())),
         )),
         (Token::Combined(l_number), Token::Basic(r_number)) => {
-            let mut basic = vec![];
-            let mut pi = vec![];
-            for basic_tok in &l_number.basic {
-                basic.push(match try_div(*basic_tok, r_number) {
+            let mut basic = Set::new(vec![]);
+            let mut pi = Set::new(vec![]);
+            for basic_tok in &l_number.basic.vec {
+                basic.vec.push(match try_div(*basic_tok, r_number) {
                     Err(MathError::Overflow) => {
                         return Ok(Token::Basic(BasicToken::Double(double_check!(
                             l_number.double() / r_number.double()
@@ -395,8 +395,8 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                     val => val?,
                 })
             }
-            for pi_tok in &l_number.pi {
-                pi.push(match try_div(*pi_tok, r_number) {
+            for pi_tok in &l_number.pi.vec {
+                pi.vec.push(match try_div(*pi_tok, r_number) {
                     Err(MathError::Overflow) => {
                         return Ok(Token::Basic(BasicToken::Double(double_check!(
                             l_number.double() / r_number.double()
@@ -407,10 +407,10 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             }
             Ok(Combined { basic, pi }.normalise())
         }
-        (Token::Combined(l_number), Token::Pi(r_number)) if l_number.basic.is_empty() => {
-            let mut basic = vec![];
-            for pi_tok in &l_number.pi {
-                basic.push(match try_div(*pi_tok, r_number) {
+        (Token::Combined(l_number), Token::Pi(r_number)) if l_number.basic.vec.is_empty() => {
+            let mut basic = Set::new(vec![]);
+            for pi_tok in &l_number.pi.vec {
+                basic.vec.push(match try_div(*pi_tok, r_number) {
                     Err(MathError::Overflow) => {
                         return Ok(Token::Basic(BasicToken::Double(double_check!(
                             l_number.double() / r_number.double()
@@ -419,7 +419,11 @@ pub fn div(l_number: Token, r_number: Token) -> Result<Token, MathError> {
                     val => val?,
                 })
             }
-            Ok(Combined { basic, pi: vec![] }.normalise())
+            Ok(Combined {
+                basic,
+                pi: Set::new(vec![]),
+            }
+            .normalise())
         }
         (Token::Combined(l_number), Token::Pi(r_number)) => Ok(Token::Basic(BasicToken::Double(
             double_check!(l_number.double() / (r_number.double() * std::f64::consts::PI)),

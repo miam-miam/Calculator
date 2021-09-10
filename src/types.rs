@@ -1,6 +1,7 @@
 use crate::number::{try_add, try_mul};
 use core::fmt;
 use gcd::Gcd;
+use std::mem::discriminant;
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -127,7 +128,10 @@ pub enum Token {
 impl Token {
     #[inline]
     pub fn combined(basic: Vec<BasicToken>, pi: Vec<BasicToken>) -> Token {
-        Token::Combined(Combined { basic, pi })
+        Token::Combined(Combined {
+            basic: Set::new(basic),
+            pi: Set::new(pi),
+        })
     }
     pub fn double(&self) -> f64 {
         match self {
@@ -141,10 +145,10 @@ impl Token {
             Token::Basic(x) => Token::Basic(x.negate()?),
             Token::Pi(x) => Token::Pi(x.negate()?),
             Token::Combined(mut x) => {
-                for tok in x.basic.iter_mut() {
+                for tok in x.basic.vec.iter_mut() {
                     *tok = tok.negate()?;
                 }
-                for tok in x.pi.iter_mut() {
+                for tok in x.pi.vec.iter_mut() {
                     *tok = tok.negate()?;
                 }
                 Token::Combined(x)
@@ -159,14 +163,14 @@ impl fmt::Debug for Token {
             Token::Basic(i) => write!(f, "{:?}", i),
             Token::Pi(i) => write!(f, "π*({:?})", i),
             Token::Combined(v) => {
-                for (pos, tok) in v.basic.iter().enumerate() {
+                for (pos, tok) in v.basic.vec.iter().enumerate() {
                     if pos == 0 {
                         write!(f, "{:?}", tok)?;
                     } else {
                         write!(f, " + {:?}", tok)?;
                     }
                 }
-                for tok in v.pi.iter() {
+                for tok in v.pi.vec.iter() {
                     write!(f, " + π*({:?})", tok)?;
                 }
                 Ok(())
@@ -427,24 +431,32 @@ impl CRoot<i128> {
 
 #[derive(PartialEq, Clone)]
 pub struct Combined {
-    pub basic: Vec<BasicToken>,
-    pub pi: Vec<BasicToken>,
+    pub basic: Set<BasicToken>,
+    pub pi: Set<BasicToken>,
 }
 
 impl Combined {
     pub fn normalise(self) -> Token {
-        match (self.basic.len(), self.pi.len()) {
+        match (self.basic.vec.len(), self.pi.vec.len()) {
             (0, 0) => Token::Basic(BasicToken::Integer(0)),
-            (0, 1) => Token::Pi(self.pi[0]),
-            (1, 0) => Token::Basic(self.basic[0]),
+            (0, 1) => Token::Pi(self.pi.vec[0]),
+            (1, 0) => Token::Basic(self.basic.vec[0]),
             _ => Token::Combined(self),
         }
     }
 
     #[inline]
     pub fn double(&self) -> f64 {
-        self.basic.iter().fold(0_f64, |acc, tok| acc + tok.double())
-            + self.pi.iter().fold(0_f64, |acc, tok| acc + tok.double()) * std::f64::consts::PI
+        self.basic
+            .vec
+            .iter()
+            .fold(0_f64, |acc, tok| acc + tok.double())
+            + self
+                .pi
+                .vec
+                .iter()
+                .fold(0_f64, |acc, tok| acc + tok.double())
+                * std::f64::consts::PI
     }
 
     pub fn add_combined(mut self, tok: Token) -> Result<Token, MathError> {
@@ -453,17 +465,17 @@ impl Combined {
                 return Ok(Token::Combined(self));
             }
             Token::Basic(tok) => {
-                self.basic_add(tok)?;
+                self.basic.add(tok)?;
             }
             Token::Pi(tok) => {
-                self.pi_add(tok)?;
+                self.pi.add(tok)?;
             }
             Token::Combined(tokens) => {
-                for tok in tokens.basic {
-                    self.basic_add(tok)?;
+                for tok in tokens.basic.vec {
+                    self.basic.add(tok)?;
                 }
-                for tok in tokens.pi {
-                    self.pi_add(tok)?;
+                for tok in tokens.pi.vec {
+                    self.pi.add(tok)?;
                 }
             }
         }
@@ -476,7 +488,7 @@ impl Combined {
                 Ok(Token::Basic(BasicToken::Integer(0)))
             }
             Token::Basic(tok) => {
-                for comb_tok in self.basic.iter_mut().chain(self.pi.iter_mut()) {
+                for comb_tok in self.basic.vec.iter_mut().chain(self.pi.vec.iter_mut()) {
                     match try_mul(*comb_tok, tok) {
                         Ok(val) => {
                             *comb_tok = val;
@@ -494,8 +506,8 @@ impl Combined {
                 Ok(self.normalise())
             }
             // Transform all the basics into Pi
-            Token::Pi(tok) if self.pi.is_empty() => {
-                for comb_tok in self.basic.iter_mut() {
+            Token::Pi(tok) if self.pi.vec.is_empty() => {
+                for comb_tok in self.basic.vec.iter_mut() {
                     match try_mul(*comb_tok, tok) {
                         Ok(val) => {
                             *comb_tok = val;
@@ -519,96 +531,54 @@ impl Combined {
     }
 
     pub fn negate(mut self) -> Result<Combined, MathError> {
-        for tok in self.basic.iter_mut() {
+        for tok in self.basic.vec.iter_mut() {
             *tok = tok.negate()?;
         }
-        for tok in self.pi.iter_mut() {
+        for tok in self.pi.vec.iter_mut() {
             *tok = tok.negate()?;
         }
         Ok(self)
     }
+}
 
-    fn basic_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
-        for (pos, basic) in self.basic.iter().enumerate() {
-            match try_add(*basic, tok) {
-                Err(MathError::Overflow) => {
-                    let double = double_check!(self
-                        .basic
-                        .iter()
-                        .fold(tok.double(), |acc, item| acc + item.double()));
-                    self.basic.clear();
-                    self.basic.push(BasicToken::Double(double));
-                    break;
-                }
-                Err(MathError::Combine) => {
-                    continue;
-                }
-                Ok(BasicToken::Integer(0)) => {
-                    self.basic.swap_remove(pos);
-                    break;
-                }
-                val => {
-                    use BasicToken::*;
-                    match (basic, val?) {
-                        // Is same type
-                        (Integer(_), Integer(_))
-                        | (Fraction(_), Fraction(_))
-                        | (SIntRoot(_), SIntRoot(_))
-                        | (SFracRoot(_), SFracRoot(_))
-                        | (Double(_), Double(_))
-                        | (CIntRoot(_), CIntRoot(_))
-                        | (CFracRoot(_), CFracRoot(_)) => {
-                            self.basic.splice(pos..pos + 1, [val?]);
-                            break;
-                        }
-                        (_, val) => {
-                            // Try to see if the val can be added somewhere else.
-                            return self.basic_add(val);
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
+#[derive(PartialEq, Clone)]
+pub struct Set<T> {
+    pub vec: Vec<T>,
+}
+
+impl<T> Set<T> {
+    #[inline]
+    pub fn new(vec: Vec<T>) -> Set<T> {
+        Set { vec }
     }
-
-    fn pi_add(&mut self, tok: BasicToken) -> Result<(), MathError> {
-        for (pos, basic) in self.pi.iter().enumerate() {
-            match try_add(*basic, tok) {
+}
+impl Set<BasicToken> {
+    pub fn add(&mut self, tok: BasicToken) -> Result<(), MathError> {
+        for (pos, vec_tok) in self.vec.iter().enumerate() {
+            match try_add(*vec_tok, tok) {
                 Err(MathError::Overflow) => {
                     let double = double_check!(self
-                        .pi
+                        .vec
                         .iter()
                         .fold(tok.double(), |acc, item| acc + item.double()));
-                    self.pi.clear();
-                    self.pi.push(BasicToken::Double(double));
+                    self.vec.clear();
+                    self.vec.push(BasicToken::Double(double));
                     break;
                 }
                 Err(MathError::Combine) => {
                     continue;
                 }
                 Ok(BasicToken::Integer(0)) => {
-                    self.pi.swap_remove(pos);
+                    self.vec.swap_remove(pos);
                     break;
                 }
                 val => {
-                    use BasicToken::*;
-                    match (basic, val?) {
-                        // Is same type
-                        (Integer(_), Integer(_))
-                        | (Fraction(_), Fraction(_))
-                        | (SIntRoot(_), SIntRoot(_))
-                        | (SFracRoot(_), SFracRoot(_))
-                        | (Double(_), Double(_))
-                        | (CIntRoot(_), CIntRoot(_))
-                        | (CFracRoot(_), CFracRoot(_)) => {
-                            self.pi.splice(pos..pos + 1, [val?]);
-                            break;
-                        }
-                        (_, val) => {
-                            // Try to see if the val can be added somewhere else.
-                            return self.pi_add(val);
-                        }
+                    if discriminant(vec_tok) == discriminant(&val?) {
+                        // If same enum variant.
+                        self.vec.splice(pos..pos + 1, [val?]);
+                        break;
+                    } else {
+                        return self.add(val?);
                     }
                 }
             }
