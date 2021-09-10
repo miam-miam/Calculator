@@ -3,8 +3,7 @@ use pest::prec_climber::*;
 pub use pest::Parser;
 
 use crate::my_math::ten_to_the_power_of;
-// use crate::number::{add, div, exp, mul, sub};
-use crate::number::{add, div, mul, sub};
+use crate::number::{add, div, exp, mul, sub};
 use crate::types::{BasicToken, Fraction, MathError, Token};
 use std::cmp::Ordering;
 
@@ -170,7 +169,7 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
             Rule::subtract => sub(lhs?, rhs?),
             Rule::multiply => mul(lhs?, rhs?),
             Rule::divide => div(lhs?, rhs?),
-            // Rule::power => exp(lhs?, rhs?),
+            Rule::power => exp(lhs?, rhs?),
             _ => unreachable!(),
         },
     )
@@ -178,43 +177,43 @@ pub fn eval(expression: Pairs<Rule>) -> Result<Token, MathError> {
 
 fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
     match function.next().unwrap().as_rule() {
-        // Rule::sqrt => exp(
-        //     eval(function.next().unwrap().into_inner())?,
-        //     Token::Basic(BasicToken::fraction(0, 1, 2)),
-        // ),
-        // Rule::cbrt => exp(
-        //     eval(function.next().unwrap().into_inner())?,
-        //     Token::Basic(BasicToken::fraction(0, 1, 3)),
-        // ),
-        //
-        // Rule::square => exp(
-        //     eval(function.next().unwrap().into_inner())?,
-        //     Token::Basic(BasicToken::Integer(2)),
-        // ),
-        // Rule::cube => exp(
-        //     eval(function.next().unwrap().into_inner())?,
-        //     Token::Basic(BasicToken::Integer(3)),
-        // ),
-        // Rule::min => Ok(function
-        //     .try_fold(
-        //         (f64::INFINITY, Token::Basic(BasicToken::Integer(0))),
-        //         |acc: (f64, Token), pair: Pair<'_, Rule>| {
-        //             let token = eval(pair.into_inner())?;
-        //             let double = token.double();
-        //             return Ok(if double < acc.0 { (double, token) } else { acc });
-        //         },
-        //     )?
-        //     .1),
-        // Rule::max => Ok(function
-        //     .try_fold(
-        //         (f64::NEG_INFINITY, Token::Basic(BasicToken::Integer(0))),
-        //         |acc: (f64, Token), pair: Pair<'_, Rule>| {
-        //             let token = eval(pair.into_inner())?;
-        //             let double = token.double();
-        //             return Ok(if double > acc.0 { (double, token) } else { acc });
-        //         },
-        //     )?
-        //     .1),
+        Rule::sqrt => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Basic(BasicToken::fraction(0, 1, 2)),
+        ),
+        Rule::cbrt => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Basic(BasicToken::fraction(0, 1, 3)),
+        ),
+
+        Rule::square => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Basic(BasicToken::Integer(2)),
+        ),
+        Rule::cube => exp(
+            eval(function.next().unwrap().into_inner())?,
+            Token::Basic(BasicToken::Integer(3)),
+        ),
+        Rule::min => Ok(function
+            .try_fold(
+                (f64::INFINITY, Token::Basic(BasicToken::Integer(0))),
+                |acc: (f64, Token), pair: Pair<'_, Rule>| {
+                    let token = eval(pair.into_inner())?;
+                    let double = token.double();
+                    return Ok(if double < acc.0 { (double, token) } else { acc });
+                },
+            )?
+            .1),
+        Rule::max => Ok(function
+            .try_fold(
+                (f64::NEG_INFINITY, Token::Basic(BasicToken::Integer(0))),
+                |acc: (f64, Token), pair: Pair<'_, Rule>| {
+                    let token = eval(pair.into_inner())?;
+                    let double = token.double();
+                    return Ok(if double > acc.0 { (double, token) } else { acc });
+                },
+            )?
+            .1),
         _ => unreachable!(),
     }
 }
