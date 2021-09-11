@@ -51,4 +51,4 @@ fn is_newline(c: char) -> bool {
     c == '\n' || c == '\r'
 }
 
-//TODO Change fraction ops to use gcd before adding everything together. + Check why (5^1/3)+2^1/3 is not correct. + Do Power division + add div and mul methods between roots and Frac/Int.
+//TODO Change fraction ops to use gcd before adding everything together. + Do Combined mul/div with combined.
