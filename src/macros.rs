@@ -36,3 +36,7 @@ macro_rules! none_to_err {
     {$op:expr} => (match $op {Some(x) => x, None => { return Err(MathError::Overflow); }});
     {$op:expr, $error:expr} => (match $op {Some(x) => x, None => { return Err($error); }});
 }
+
+macro_rules! commutative {
+    {$lhs: pat, $rhs: pat} => (($lhs, $rhs) | ($rhs, $lhs));
+}
