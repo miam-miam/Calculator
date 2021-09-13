@@ -29,7 +29,11 @@ macro_rules! pow {
 
 // Only using fully defined values so warning is not a problem.
 macro_rules! double_check {
-    {$op:expr} => (match $op {f64::INFINITY | f64::NEG_INFINITY => { return Err(MathError::DoubleOverflow);}, x if x.is_nan() => unreachable!(), x => {x}});
+    {$op:expr} => (match $op {f64::INFINITY | f64::NEG_INFINITY => { return Err(MathError::DoubleOverflow);}, x if x.is_nan() => { return Err(MathError::DoubleOverflow);}, x => {x}});
+}
+
+macro_rules! trig_check {
+    {$op: expr} => (match $op {val if val.abs() > 157079632.6 => {return Err(MathError::TrigAccuracy);}, val => val, })
 }
 
 macro_rules! none_to_err {

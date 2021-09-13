@@ -753,3 +753,192 @@ pub fn exp(l_number: Token, r_number: Token) -> Result<Token, MathError> {
             .powf(rhs.double()))))),
     }
 }
+
+pub fn sin(number: Token) -> Result<Token, MathError> {
+    match number {
+        Token::Basic(BasicToken::Integer(0)) | Token::Pi(BasicToken::Integer(_)) => {
+            Ok(Token::Basic(BasicToken::Integer(0)))
+        }
+        Token::Pi(BasicToken::Fraction(mut frac)) => {
+            let mut negative = frac.int.abs() % 2 == 1;
+            if frac.num < 0 {
+                frac.num = frac.num.abs();
+                negative = !negative;
+            }
+            if frac.num > frac.den / 2 {
+                frac.num = frac.den - frac.num;
+            }
+            Ok(match (frac.num, frac.den, negative) {
+                (1, 12, false) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, 1, 4, 6),
+                        BasicToken::s_frac_root(0, -1, 4, 2),
+                    ],
+                    vec![],
+                ),
+                (1, 10, false) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, 1, 4, 5),
+                        BasicToken::fraction(0, -1, 4),
+                    ],
+                    vec![],
+                ),
+                (1, 6, false) => Token::Basic(BasicToken::fraction(0, 1, 2)),
+                (1, 4, false) => Token::Basic(BasicToken::s_frac_root(0, 1, 2, 2)),
+                (3, 10, false) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, 1, 4, 5),
+                        BasicToken::fraction(0, 1, 4),
+                    ],
+                    vec![],
+                ),
+                (1, 3, false) => Token::Basic(BasicToken::s_frac_root(0, 1, 2, 3)),
+                (5, 12, false) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, 1, 4, 6),
+                        BasicToken::s_frac_root(0, 1, 4, 2),
+                    ],
+                    vec![],
+                ),
+                (1, 2, false) => Token::Basic(BasicToken::Integer(1)),
+                (1, 12, true) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, -1, 4, 6),
+                        BasicToken::s_frac_root(0, 1, 4, 2),
+                    ],
+                    vec![],
+                ),
+                (1, 10, true) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, -1, 4, 5),
+                        BasicToken::fraction(0, 1, 4),
+                    ],
+                    vec![],
+                ),
+                (1, 6, true) => Token::Basic(BasicToken::fraction(0, -1, 2)),
+                (1, 4, true) => Token::Basic(BasicToken::s_frac_root(0, -1, 2, 2)),
+                (3, 10, true) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, -1, 4, 5),
+                        BasicToken::fraction(0, -1, 4),
+                    ],
+                    vec![],
+                ),
+                (1, 3, true) => Token::Basic(BasicToken::s_frac_root(0, -1, 2, 3)),
+                (5, 12, true) => Token::combined(
+                    vec![
+                        BasicToken::s_frac_root(0, -1, 4, 6),
+                        BasicToken::s_frac_root(0, -1, 4, 2),
+                    ],
+                    vec![],
+                ),
+                (1, 2, true) => Token::Basic(BasicToken::Integer(-1)),
+                (num, den, false) => Token::Basic(BasicToken::Double(
+                    ((num as f64 / den as f64) * std::f64::consts::PI).sin(),
+                )),
+                (num, den, true) => Token::Basic(BasicToken::Double(
+                    (-(num as f64 / den as f64) * std::f64::consts::PI).sin(),
+                )),
+            })
+        }
+        val => Ok(Token::Basic(BasicToken::Double(
+            trig_check!(val.double()).sin(),
+        ))),
+    }
+}
+
+pub fn cos(number: Token) -> Result<Token, MathError> {
+    match number {
+        Token::Basic(BasicToken::Integer(0)) => Ok(Token::Basic(BasicToken::Integer(1))),
+        Token::Pi(BasicToken::Integer(x)) => match x % 2 == 1 {
+            true => Ok(Token::Basic(BasicToken::Integer(-1))),
+            false => Ok(Token::Basic(BasicToken::Integer(1))),
+        },
+        Token::Pi(BasicToken::Fraction(mut frac)) => {
+            frac.num = frac.num.abs();
+            if frac.num > frac.den / 2 {
+                frac.num = frac.den - frac.num;
+            }
+            Ok(
+                match (
+                    frac.num,
+                    frac.den,
+                    (frac.int.abs() % 2 == 1) ^ (frac.num > frac.den / 2),
+                ) {
+                    (5, 12, false) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, 1, 4, 6),
+                            BasicToken::s_frac_root(0, -1, 4, 2),
+                        ],
+                        vec![],
+                    ),
+                    (2, 5, false) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, 1, 4, 5),
+                            BasicToken::fraction(0, -1, 4),
+                        ],
+                        vec![],
+                    ),
+                    (1, 3, false) => Token::Basic(BasicToken::fraction(0, 1, 2)),
+                    (1, 4, false) => Token::Basic(BasicToken::s_frac_root(0, 1, 2, 2)),
+                    (1, 5, false) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, 1, 4, 5),
+                            BasicToken::fraction(0, 1, 4),
+                        ],
+                        vec![],
+                    ),
+                    (1, 6, false) => Token::Basic(BasicToken::s_frac_root(0, 1, 2, 3)),
+                    (1, 12, false) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, 1, 4, 6),
+                            BasicToken::s_frac_root(0, 1, 4, 2),
+                        ],
+                        vec![],
+                    ),
+                    (5, 12, true) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, -1, 4, 6),
+                            BasicToken::s_frac_root(0, 1, 4, 2),
+                        ],
+                        vec![],
+                    ),
+                    (2, 5, true) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, -1, 4, 5),
+                            BasicToken::fraction(0, 1, 4),
+                        ],
+                        vec![],
+                    ),
+                    (1, 3, true) => Token::Basic(BasicToken::fraction(0, -1, 2)),
+                    (1, 4, true) => Token::Basic(BasicToken::s_frac_root(0, -1, 2, 2)),
+                    (1, 5, true) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, -1, 4, 5),
+                            BasicToken::fraction(0, -1, 4),
+                        ],
+                        vec![],
+                    ),
+                    (1, 6, true) => Token::Basic(BasicToken::s_frac_root(0, -1, 2, 3)),
+                    (1, 12, true) => Token::combined(
+                        vec![
+                            BasicToken::s_frac_root(0, -1, 4, 6),
+                            BasicToken::s_frac_root(0, -1, 4, 2),
+                        ],
+                        vec![],
+                    ),
+                    (1, 2, _) => Token::Basic(BasicToken::Integer(0)),
+                    (num, den, true) => Token::Basic(BasicToken::Double(
+                        -((num as f64 / den as f64) * std::f64::consts::PI).cos(),
+                    )),
+                    (num, den, false) => Token::Basic(BasicToken::Double(
+                        ((num as f64 / den as f64) * std::f64::consts::PI).cos(),
+                    )),
+                },
+            )
+        }
+        val => Ok(Token::Basic(BasicToken::Double(
+            trig_check!(val.double()).cos(),
+        ))),
+    }
+}

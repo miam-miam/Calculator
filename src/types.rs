@@ -190,9 +190,7 @@ pub enum MathError {
     ComplexNumber,
     // For 0^0
     ExponentiationError,
-    InvalidDecimalPoint,
-    // Using Fraction to store int
-    InvalidFraction,
+    TrigAccuracy,
 }
 
 impl fmt::Display for MathError {
@@ -206,8 +204,7 @@ impl fmt::Display for MathError {
             MathError::DivisionByZero => write!(f, "Division by zero"),
             MathError::ComplexNumber => write!(f, "Complex numbers not implemented"),
             MathError::ExponentiationError => write!(f, "Cannot compute 0^0"),
-            MathError::InvalidDecimalPoint => write!(f, "Invalid decimal point"),
-            MathError::InvalidFraction => write!(f, "Fraction should be integer"),
+            MathError::TrigAccuracy => write!(f, "Cannot compute trig value accurately enough"),
         }
     }
 }
