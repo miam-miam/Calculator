@@ -14,13 +14,14 @@ operation = _{ add | subtract | divide | power | multiply }
     multiply = { "*" | "" }
 
 func = {multi_arg | single_arg}
-    single_arg = _{(sqrt | cbrt | square | cube | sin | cos) ~ "(" ~ expr ~ ")"?}
+    single_arg = _{(sqrt | cbrt | square | cube | sin | cos | tan) ~ "(" ~ expr ~ ")"?}
         sqrt = {"sqrt"}
         cbrt = {"cbrt"}
         square = {"square"}
         cube = {"cube"}
         sin = {"sin"}
         cos = {"cos"}
+        tan = {"tan"}
 
     multi_arg = _{( min | max) ~ "(" ~ expr ~ (";" ~ expr)* ~ ")"?}
         min = {"min"}

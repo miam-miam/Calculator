@@ -27,13 +27,18 @@ macro_rules! pow {
     );
     }
 
+macro_rules! abs {
+    {$self:expr} => (match $self.checked_abs() {Some(i) => i, None => {return Err(MathError::Overflow);}});
+    {$self:expr, $error:expr} => (match $self.checked_abs() {Some(i) => i, None => {return $error;}});
+}
+
 // Only using fully defined values so warning is not a problem.
 macro_rules! double_check {
     {$op:expr} => (match $op {f64::INFINITY | f64::NEG_INFINITY => { return Err(MathError::DoubleOverflow);}, x if x.is_nan() => { return Err(MathError::DoubleOverflow);}, x => {x}});
 }
 
 macro_rules! trig_check {
-    {$op: expr} => (match $op {val if val.abs() > 157079632.6 => {return Err(MathError::TrigAccuracy);}, val => val, })
+    {$op: expr} => (match $op {val if val > 157079632.6 || val < -157079632.6 => {return Err(MathError::TrigAccuracy);}, val => val, })
 }
 
 macro_rules! none_to_err {

@@ -539,7 +539,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
     match (lhs, rhs) {
         (BasicToken::Integer(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let a = pow!(la, ra);
             match negative {
                 false => Ok(BasicToken::Integer(a)),
@@ -548,7 +548,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
         }
         (BasicToken::Fraction(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let num = pow!((la.int * la.den + la.num), ra);
             let den = pow!(la.den, ra);
             let res = match negative {
@@ -562,8 +562,8 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
                 return Err(MathError::Overflow);
             }
             let negative = ra.num < 0 || ra.int < 0;
-            ra.num = ra.num.abs();
-            ra.int = ra.int.abs();
+            ra.num = abs!(ra.num);
+            ra.int = abs!(ra.int);
             let res = factorise(la, ra.den == 2);
             let outside_root = pow!(la, ra.int);
             let inside_root = pow!(res.inside, ra.num);
@@ -606,8 +606,8 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
                 return Err(MathError::Overflow);
             }
             let negative = ra.num < 0 || ra.int < 0;
-            ra.num = ra.num.abs();
-            ra.int = ra.int.abs();
+            ra.num = abs!(ra.num);
+            ra.int = abs!(ra.int);
             let num = add!(mul!(la.int, la.den), la.num);
 
             let mut res_num = factorise(num, ra.den == 2);
@@ -656,7 +656,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
         }
         (BasicToken::SIntRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let mul = mul!(pow!(la.mul, ra), pow!(la.base, ra / 2));
             match (negative, ra % 2) {
                 (true, 0) => Ok(BasicToken::fraction(0, 1, mul)),
@@ -667,7 +667,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
         }
         (BasicToken::CIntRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let mul = mul!(pow!(la.mul, ra), pow!(la.base, ra / 3));
             match (negative, ra % 3) {
                 (true, 0) => Ok(BasicToken::fraction(0, 1, mul)),
@@ -680,7 +680,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
         }
         (BasicToken::SFracRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let num = la.mul.int * la.mul.den + la.mul.num;
             let mul_num = mul!(pow!(num, ra), pow!(la.base, ra / 2));
             let mul_den = pow!(la.mul.den, ra);
@@ -699,7 +699,7 @@ fn try_exp(lhs: BasicToken, rhs: BasicToken) -> Result<BasicToken, MathError> {
         }
         (BasicToken::CFracRoot(la), BasicToken::Integer(mut ra)) => {
             let negative = ra < 0;
-            ra = ra.abs();
+            ra = abs!(ra);
             let num = la.mul.int * la.mul.den + la.mul.num;
             let mul_num = mul!(pow!(num, ra), pow!(la.base, ra / 3));
             let mul_den = pow!(la.mul.den, ra);
@@ -760,9 +760,9 @@ pub fn sin(number: Token) -> Result<Token, MathError> {
             Ok(Token::Basic(BasicToken::Integer(0)))
         }
         Token::Pi(BasicToken::Fraction(mut frac)) => {
-            let mut negative = frac.int.abs() % 2 == 1;
+            let mut negative = abs!(frac.int) % 2 == 1;
             if frac.num < 0 {
-                frac.num = frac.num.abs();
+                frac.num = abs!(frac.num);
                 negative = !negative;
             }
             if frac.num > frac.den / 2 {
@@ -855,7 +855,7 @@ pub fn cos(number: Token) -> Result<Token, MathError> {
             false => Ok(Token::Basic(BasicToken::Integer(1))),
         },
         Token::Pi(BasicToken::Fraction(mut frac)) => {
-            frac.num = frac.num.abs();
+            frac.num = abs!(frac.num);
             if frac.num > frac.den / 2 {
                 frac.num = frac.den - frac.num;
             }
@@ -863,7 +863,7 @@ pub fn cos(number: Token) -> Result<Token, MathError> {
                 match (
                     frac.num,
                     frac.den,
-                    (frac.int.abs() % 2 == 1) ^ (frac.num > frac.den / 2),
+                    (abs!(frac.int) % 2 == 1) ^ (frac.num > frac.den / 2),
                 ) {
                     (5, 12, false) => Token::combined(
                         vec![
@@ -939,6 +939,149 @@ pub fn cos(number: Token) -> Result<Token, MathError> {
         }
         val => Ok(Token::Basic(BasicToken::Double(
             trig_check!(val.double()).cos(),
+        ))),
+    }
+}
+
+pub fn tan(number: Token) -> Result<Token, MathError> {
+    match number {
+        Token::Basic(BasicToken::Integer(0)) | Token::Pi(BasicToken::Integer(_)) => {
+            Ok(Token::Basic(BasicToken::Integer(0)))
+        }
+        Token::Pi(BasicToken::Fraction(mut frac)) => {
+            let mut negative = frac.num < 0;
+            frac.num = abs!(frac.num);
+            frac.int = abs!(frac.int);
+            if frac.num > frac.den / 2 {
+                frac.num = frac.den - frac.num;
+                negative = !negative;
+            }
+            Ok(match (frac.num, frac.den, negative) {
+                (1, 24, false) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(1, 6),
+                        BasicToken::s_int_root(-1, 3),
+                        BasicToken::s_int_root(1, 2),
+                        BasicToken::Integer(-2),
+                    ],
+                    vec![],
+                ),
+                (1, 12, false) => Token::combined(
+                    vec![BasicToken::Integer(2), BasicToken::s_int_root(-1, 3)],
+                    vec![],
+                ),
+                (1, 8, false) => Token::combined(
+                    vec![BasicToken::s_int_root(1, 2), BasicToken::Integer(-1)],
+                    vec![],
+                ),
+                (1, 6, false) => Token::Basic(BasicToken::s_frac_root(0, 1, 3, 3)),
+                (5, 24, false) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(1, 6),
+                        BasicToken::s_int_root(1, 3),
+                        BasicToken::s_int_root(-1, 2),
+                        BasicToken::Integer(-2),
+                    ],
+                    vec![],
+                ),
+                (1, 4, false) => Token::Basic(BasicToken::Integer(1)),
+                (7, 24, false) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(1, 6),
+                        BasicToken::s_int_root(-1, 3),
+                        BasicToken::s_int_root(-1, 2),
+                        BasicToken::Integer(2),
+                    ],
+                    vec![],
+                ),
+                (1, 3, false) => Token::Basic(BasicToken::s_int_root(1, 3)),
+                (3, 8, false) => Token::combined(
+                    vec![BasicToken::Integer(1), BasicToken::s_int_root(1, 2)],
+                    vec![],
+                ),
+                (5, 12, false) => Token::combined(
+                    vec![BasicToken::Integer(2), BasicToken::s_int_root(1, 3)],
+                    vec![],
+                ),
+                (11, 24, false) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(1, 6),
+                        BasicToken::s_int_root(1, 3),
+                        BasicToken::s_int_root(1, 2),
+                        BasicToken::Integer(2),
+                    ],
+                    vec![],
+                ),
+                (1, 24, true) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(-1, 6),
+                        BasicToken::s_int_root(1, 3),
+                        BasicToken::s_int_root(-1, 2),
+                        BasicToken::Integer(2),
+                    ],
+                    vec![],
+                ),
+                (1, 12, true) => Token::combined(
+                    vec![BasicToken::Integer(-2), BasicToken::s_int_root(1, 3)],
+                    vec![],
+                ),
+                (1, 8, true) => Token::combined(
+                    vec![BasicToken::s_int_root(-1, 2), BasicToken::Integer(1)],
+                    vec![],
+                ),
+                (1, 6, true) => Token::Basic(BasicToken::s_frac_root(0, -1, 3, 3)),
+                (5, 24, true) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(-1, 6),
+                        BasicToken::s_int_root(-1, 3),
+                        BasicToken::s_int_root(1, 2),
+                        BasicToken::Integer(2),
+                    ],
+                    vec![],
+                ),
+                (1, 4, true) => Token::Basic(BasicToken::Integer(-1)),
+                (7, 24, true) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(-1, 6),
+                        BasicToken::s_int_root(1, 3),
+                        BasicToken::s_int_root(1, 2),
+                        BasicToken::Integer(-2),
+                    ],
+                    vec![],
+                ),
+                (1, 3, true) => Token::Basic(BasicToken::s_int_root(-1, 3)),
+                (3, 8, true) => Token::combined(
+                    vec![BasicToken::Integer(-1), BasicToken::s_int_root(-1, 2)],
+                    vec![],
+                ),
+                (5, 12, true) => Token::combined(
+                    vec![BasicToken::Integer(-2), BasicToken::s_int_root(-1, 3)],
+                    vec![],
+                ),
+                (11, 24, true) => Token::combined(
+                    vec![
+                        BasicToken::s_int_root(-1, 6),
+                        BasicToken::s_int_root(-1, 3),
+                        BasicToken::s_int_root(-1, 2),
+                        BasicToken::Integer(-2),
+                    ],
+                    vec![],
+                ),
+                (1, 2, _) => return Err(MathError::TangentError),
+                (num, den, true) => Token::Basic(BasicToken::Double(double_check!(-((num
+                    as f64
+                    / den as f64)
+                    * std::f64::consts::PI)
+                    .tan()))),
+                (num, den, false) => Token::Basic(BasicToken::Double(double_check!(((num
+                    as f64
+                    / den as f64)
+                    * std::f64::consts::PI)
+                    .tan()))),
+            })
+        }
+        val => Ok(Token::Basic(BasicToken::Double(
+            trig_check!(val.double()).tan(),
         ))),
     }
 }

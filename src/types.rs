@@ -191,6 +191,7 @@ pub enum MathError {
     // For 0^0
     ExponentiationError,
     TrigAccuracy,
+    TangentError,
 }
 
 impl fmt::Display for MathError {
@@ -205,6 +206,7 @@ impl fmt::Display for MathError {
             MathError::ComplexNumber => write!(f, "Complex numbers not implemented"),
             MathError::ExponentiationError => write!(f, "Cannot compute 0^0"),
             MathError::TrigAccuracy => write!(f, "Cannot compute trig value accurately enough"),
+            MathError::TangentError => write!(f, "Cannot compute the tangent of pi/2"),
         }
     }
 }
@@ -251,7 +253,7 @@ impl Fraction {
         if self.num == 0 {
             return Ok(BasicToken::Integer(self.int));
         }
-        let gcd: i128 = ((self.num.abs() as u128).gcd(self.den.abs() as u128)) as i128;
+        let gcd: i128 = ((abs!(self.num) as u128).gcd(abs!(self.den) as u128)) as i128;
         self.num /= gcd;
         self.den /= gcd;
 

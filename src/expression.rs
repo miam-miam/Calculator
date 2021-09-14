@@ -3,7 +3,7 @@ use pest::prec_climber::*;
 pub use pest::Parser;
 
 use crate::my_math::ten_to_the_power_of;
-use crate::number::{add, cos, div, exp, mul, sin, sub};
+use crate::number::{add, cos, div, exp, mul, sin, sub, tan};
 use crate::types::{BasicToken, Fraction, MathError, Token};
 use std::cmp::Ordering;
 
@@ -200,6 +200,7 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
         ),
         Rule::sin => sin(eval(function.next().unwrap().into_inner())?),
         Rule::cos => cos(eval(function.next().unwrap().into_inner())?),
+        Rule::tan => tan(eval(function.next().unwrap().into_inner())?),
         Rule::min => Ok(function
             .try_fold(
                 (f64::INFINITY, Token::Basic(BasicToken::Integer(0))),
