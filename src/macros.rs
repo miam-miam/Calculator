@@ -38,7 +38,7 @@ macro_rules! double_check {
 }
 
 macro_rules! trig_check {
-    {$op: expr} => (match $op {val if val > 157079632.6 || val < -157079632.6 => {return Err(MathError::TrigAccuracy);}, val => val, })
+    {$op: expr} => (match $op {val if !(-157079632.6..=157079632.6).contains(&val) => {return Err(MathError::TrigAccuracy);}, val => val, })
 }
 
 macro_rules! none_to_err {

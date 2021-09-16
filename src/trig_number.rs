@@ -234,7 +234,7 @@ pub fn asin(number: Token) -> Result<Token, MathError> {
             ) => Ok(Pi(BasicToken::fraction(0, -5, 12))),
             _ => {
                 let double = val.double();
-                match double > 1.0 || double < -1.0 {
+                match !(-1.0..=1.0).contains(&double) {
                     true => Err(MathError::DomainError),
                     false => Ok(Basic(Double(double.asin()))),
                 }
@@ -291,7 +291,7 @@ pub fn asin(number: Token) -> Result<Token, MathError> {
         Basic(Integer(-1)) => Ok(Pi(BasicToken::fraction(0, -1, 2))),
         val => {
             let double = val.double();
-            match double > 1.0 || double < -1.0 {
+            match !(-1.0..=1.0).contains(&double) {
                 true => Err(MathError::DomainError),
                 false => Ok(Basic(Double(double.asin()))),
             }
@@ -536,7 +536,7 @@ pub fn acos(number: Token) -> Result<Token, MathError> {
 
             _ => {
                 let double = val.double();
-                match double > 1.0 || double < -1.0 {
+                match !(-1.0..=1.0).contains(&double) {
                     true => Err(MathError::DomainError),
                     false => Ok(Basic(Double(double.acos()))),
                 }
@@ -597,7 +597,7 @@ pub fn acos(number: Token) -> Result<Token, MathError> {
         })) => Ok(Pi(BasicToken::fraction(0, 5, 6))),
         val => {
             let double = val.double();
-            match double > 1.0 || double < -1.0 {
+            match !(-1.0..=1.0).contains(&double) {
                 true => Err(MathError::DomainError),
                 false => Ok(Basic(Double(double.acos()))),
             }
@@ -792,7 +792,7 @@ pub fn atan(number: Token) -> Result<Token, MathError> {
             ) => Ok(Pi(BasicToken::fraction(0, 11, 24))),
             _ => {
                 let double = val.double();
-                match double > 1.0 || double < -1.0 {
+                match !(-1.0..=1.0).contains(&double) {
                     true => Err(MathError::DomainError),
                     false => Ok(Basic(Double(double.atan()))),
                 }
