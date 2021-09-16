@@ -8,6 +8,7 @@ pub mod macros;
 pub mod expression;
 pub mod my_math;
 pub mod number;
+pub mod trig_number;
 pub mod types;
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ operation = _{ add | subtract | divide | power | multiply }
     multiply = { "*" | "" }
 
 func = {multi_arg | single_arg}
-    single_arg = _{(sqrt | cbrt | square | cube | sin | cos | tan) ~ "(" ~ expr ~ ")"?}
+    single_arg = _{(sqrt | cbrt | square | cube | sin | cos | tan | asin | acos | atan)  ~ "(" ~ expr ~ ")"?}
         sqrt = {"sqrt"}
         cbrt = {"cbrt"}
         square = {"square"}
@@ -22,6 +22,9 @@ func = {multi_arg | single_arg}
         sin = {"sin"}
         cos = {"cos"}
         tan = {"tan"}
+        asin = {"asin" | "arcsin" | "arsin"}
+        acos = {"acos" | "arccos" | "arcos"}
+        atan = {"atan" | "arctan" | "artan"}
 
     multi_arg = _{( min | max) ~ "(" ~ expr ~ (";" ~ expr)* ~ ")"?}
         min = {"min"}

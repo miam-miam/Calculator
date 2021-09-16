@@ -192,6 +192,7 @@ pub enum MathError {
     ExponentiationError,
     TrigAccuracy,
     TangentError,
+    DomainError,
 }
 
 impl fmt::Display for MathError {
@@ -207,6 +208,9 @@ impl fmt::Display for MathError {
             MathError::ExponentiationError => write!(f, "Cannot compute 0^0"),
             MathError::TrigAccuracy => write!(f, "Cannot compute trig value accurately enough"),
             MathError::TangentError => write!(f, "Cannot compute the tangent of pi/2"),
+            MathError::DomainError => {
+                write!(f, "Function cannot compute values outside of it's domain.")
+            }
         }
     }
 }

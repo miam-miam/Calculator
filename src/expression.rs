@@ -3,7 +3,8 @@ use pest::prec_climber::*;
 pub use pest::Parser;
 
 use crate::my_math::ten_to_the_power_of;
-use crate::number::{add, cos, div, exp, mul, sin, sub, tan};
+use crate::number::{add, div, exp, mul, sub};
+use crate::trig_number::{acos, asin, atan, cos, sin, tan};
 use crate::types::{BasicToken, Fraction, MathError, Token};
 use std::cmp::Ordering;
 
@@ -157,7 +158,7 @@ fn token_eval(pair: Pair<Rule>) -> Result<Token, MathError> {
             Token::Basic(x) => Token::Pi(x),
             _ => unreachable!(),
         }),
-        Rule::single_pi => Ok(Token::Pi(BasicToken::Integer(0))),
+        Rule::single_pi => Ok(Token::Pi(BasicToken::Integer(1))),
         _ => unreachable!(),
     }
 }
@@ -201,6 +202,9 @@ fn fn_eval(mut function: Pairs<Rule>) -> Result<Token, MathError> {
         Rule::sin => sin(eval(function.next().unwrap().into_inner())?),
         Rule::cos => cos(eval(function.next().unwrap().into_inner())?),
         Rule::tan => tan(eval(function.next().unwrap().into_inner())?),
+        Rule::asin => asin(eval(function.next().unwrap().into_inner())?),
+        Rule::acos => acos(eval(function.next().unwrap().into_inner())?),
+        Rule::atan => atan(eval(function.next().unwrap().into_inner())?),
         Rule::min => Ok(function
             .try_fold(
                 (f64::INFINITY, Token::Basic(BasicToken::Integer(0))),
