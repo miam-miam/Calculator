@@ -58,9 +58,9 @@ impl BasicToken {
             BasicToken::Fraction(i) => i.int as f64 + i.num as f64 / i.den as f64,
             BasicToken::SIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
             BasicToken::SFracRoot(i) => {
-                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
+                (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).sqrt()
             }
-            BasicToken::CIntRoot(i) => (i.mul as f64) * (i.base as f64).sqrt(),
+            BasicToken::CIntRoot(i) => (i.mul as f64) * (i.base as f64).cbrt(),
             BasicToken::CFracRoot(i) => {
                 (i.mul.int as f64 + i.mul.num as f64 / i.mul.den as f64) * (i.base as f64).cbrt()
             }
